@@ -8,7 +8,7 @@ const BASE_URL = process.env.E2E_BASE_URL || `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
@@ -22,7 +22,7 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], headless: false } },
     // Uncomment after `npx playwright install firefox webkit`:
     // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     // { name: 'webkit', use: { ...devices['Desktop Safari'] } },
@@ -44,6 +44,8 @@ export default defineConfig({
       JWT_SECRET: 'e2e-only-secret-not-for-production',
       COOKIE_SECURE: 'false',
       SEED_DEMO_USER: 'true',
+      // Override any deployment DATABASE_PATH loaded from .env; the specs clean up this file.
+      DATABASE_PATH: process.env.E2E_DATABASE_PATH || path.join(ROOT, 'server/data/shop.db'),
     },
   },
 });
