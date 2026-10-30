@@ -28,6 +28,27 @@ The SQLite database is created and seeded the first time the app starts, at `ser
 
 Run the API tests with `npm test`.
 
+### End-to-end tests (Playwright)
+
+Everything Playwright-related lives in `tests/`, a separate package with its own dependencies. Put specs in `tests/e2e/` (e.g. `tests/e2e/checkout.spec.js`). The app's dependencies must be installed at the root first (`npm install`). One-time setup:
+
+```bash
+cd tests
+npm install
+npm run install-browsers
+```
+
+Run these commands from `tests/`:
+
+| Command | What it does |
+| --- | --- |
+| `npm test` | Run all specs headless |
+| `npm run test:ui` | Open Playwright's interactive UI mode |
+| `npm run test:headed` | Run with a visible browser |
+| `npm run report` | Open the last HTML report |
+
+Playwright builds the client and starts the production server on http://localhost:4173. It uses the app's normal persistent database (`server/data/shop.db`, shared with `npm run dev`), so accounts, carts, orders and reviews created by tests stay between runs. The 30 products and the demo login (`demo@shopsphere.dev` / `demo1234`) are seeded when the database is first created; run `npm run seed` at the root to reset it. Tests can use relative URLs such as `page.goto('/cart')`. To test an app that is already running (for example a staging deploy), set `E2E_BASE_URL=https://…`; no local server is started then.
+
 ## Payments
 
 Checkout uses a **simulated** payment processor. No card data is stored; only the card brand and last 4 digits are kept. Test cards:
@@ -81,6 +102,9 @@ server/            Express API
 client/            React app (Vite, React Router)
   src/pages/         Home, Search, Product, Cart, Checkout, Orders, Account, Auth
   src/context/       auth, cart (guest + account), toasts
+tests/             Playwright end-to-end tests (separate package)
+  playwright.config.js
+  e2e/               your specs
 ```
 
 SQLite suits a single-instance deployment. To run several instances, move to Postgres. The SQL is plain and lives in the route files.
