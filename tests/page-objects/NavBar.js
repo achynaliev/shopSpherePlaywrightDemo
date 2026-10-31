@@ -21,4 +21,9 @@ export class NavBar {
         await this.cartPageLogo.click()
     }
 
+    async searchItem(item) {
+        await this.searchInput.fill(item);
+        await this.searchButton.click()
+    }
+
 }
