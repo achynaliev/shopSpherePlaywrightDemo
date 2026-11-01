@@ -83,7 +83,7 @@ authenticatedTest.describe('Product list and Filter tests', () => {
         await expect(productsListAndFilter.previousPageButton).toBeEnabled();
 
         await productsListAndFilter.previousPageButton.click();
-        await expect(productsListAndFilter.activePageButton).toHaveText('1');
+        await expect(productsListAndFilter.activePageButton).toHaveText('2');
         await expect(productsListAndFilter.previousPageButton).toBeDisabled();
     });
 });
