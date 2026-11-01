@@ -21,7 +21,7 @@ export function authRouter(db, config) {
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: config.isProd ? 20 : 1000,
+    limit: config.authRateLimit,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     message: { error: 'Too many attempts. Please wait a few minutes and try again.' },
