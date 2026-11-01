@@ -18,29 +18,122 @@ authenticatedTest.describe('Product Filter tests', () => {
         await expect(productsListAndFilter.activeDepartment).toContainText('Electronics');
         await expect(productsListAndFilter.productCard.first()).toBeVisible();
         await expect(productsListAndFilter.productCard).not.toHaveCount(0);
-        await expect(productsListAndFilter.productCard).toHaveAttribute(
-            'data-category',
-            'Electronics'
+        const categories = await productsListAndFilter.productCard.evaluateAll(
+            cards => cards.map(card => card.getAttribute('data-category'))
         );
+
+        expect(categories.length).toBeGreaterThan(0);
+        expect(categories.every(category => category === 'Electronics')).toBe(true);
     });
 
     authenticatedTest('Filter by customer rating works correctly', async ({ authenticatedPage }) => {
         const poManager = new POManager(authenticatedPage);
         const productsListAndFilter = poManager.getProductsAndFilter();
         await authenticatedPage.goto('/search');
+        await expect(productsListAndFilter.customerReviewsFilter).toBeVisible();
+        await expect(productsListAndFilter.customerReviewOptions).toHaveCount(3);
+
+        await productsListAndFilter.customerReviewsFilter
+            .getByRole('button', { name: /4\.0 out of 5 stars/ })
+            .click();
+        await expect(productsListAndFilter.productCard.first()).toBeVisible();
+        const ratings = await productsListAndFilter.productRatings.all();
+
+        for (const rating of ratings) {
+            const ariaLabel = await rating.getAttribute('aria-label');
+            const score = Number.parseFloat(ariaLabel);
+
+            expect(score).toBeGreaterThanOrEqual(4);
+        }
     });
 
     authenticatedTest('Filter by price works correctly', async ({ authenticatedPage }) => {
         const poManager = new POManager(authenticatedPage);
         const productsListAndFilter = poManager.getProductsAndFilter();
         await authenticatedPage.goto('/search');
+        await expect(productsListAndFilter.priceFilter).toBeVisible();
+        await productsListAndFilter.priceFilter
+            .getByRole('button', { name: '$25 to $50' })
+            .click();
+        await expect(productsListAndFilter.activePriceOption)
+            .toHaveText('$25 to $50');
+        await expect.poll(async () => {
+            const prices = await productsListAndFilter.productPrices.evaluateAll(elements =>
+                elements.map(element => {
+                    const [dollars, cents] = Array.from(element.querySelectorAll('sup'))
+                        .map(node => node.textContent.trim());
+                    const wholeDollars = element.childNodes[1].textContent.trim();
+                    return Number(`${wholeDollars}.${cents}`);
+                })
+            );
+            return prices.length > 0 &&
+                prices.every(price => price >= 25 && price <= 50);
+        }).toBe(true);
     });
 
-    authenticatedTest('Filter by Availability works correctly', async ({ authenticatedPage }) => {
+    authenticatedTest('Filter by in-stock availability works correctly', async ({ authenticatedPage }) => {
         const poManager = new POManager(authenticatedPage);
         const productsListAndFilter = poManager.getProductsAndFilter();
         await authenticatedPage.goto('/search');
+
+        await expect(productsListAndFilter.availabilityFilter).toBeVisible();
+        await expect(productsListAndFilter.inStockCheckbox).not.toBeChecked();
+        await productsListAndFilter.inStockCheckbox.click();
+        await expect(productsListAndFilter.inStockCheckbox).toBeChecked();
+        await expect.poll(async () => {
+            return await productsListAndFilter.productCard.evaluateAll(cards =>
+                cards.every(card =>
+                    !card.textContent.includes('Currently unavailable')
+                )
+            );
+        }).toBe(true);
     });
 
+    authenticatedTest('Filter by deals works correctly', async ({ authenticatedPage }) => {
+        const poManager = new POManager(authenticatedPage);
+        const productsListAndFilter = poManager.getProductsAndFilter();
+        await authenticatedPage.goto('/search');
+        await expect(productsListAndFilter.dealsOnlyCheckbox).not.toBeChecked();
+        await productsListAndFilter.dealsOnlyCheckbox.click();
+        await expect(productsListAndFilter.dealsOnlyCheckbox).toBeChecked();
+        await expect(productsListAndFilter.productCard.first()).toBeVisible();
 
+        const productCards = productsListAndFilter.productCard;
+
+        // Every product must have a discount badge, current price and list price.
+        await expect(productCards.locator('.price-discount')).toHaveCount(
+            await productCards.count()
+        );
+        await expect(productCards.locator('.price-now')).toHaveCount(
+            await productCards.count()
+        );
+        await expect(productCards.locator('.price-list')).toHaveCount(
+            await productCards.count()
+        );
+
+        // Verify the original list price is greater than the current price.
+        const prices = await productCards.evaluateAll(cards =>
+            cards.map(card => {
+                const currentPrice = card.querySelector('.price-now');
+                const listPrice = card.querySelector('.price-list s');
+
+                const extractPrice = element => {
+                    const wholeDollars = element.childNodes[1].textContent.trim();
+                    const cents = element.querySelector('sup:last-child').textContent.trim();
+
+                    return Number(`${wholeDollars}.${cents}`);
+                };
+
+                return {
+                    current: extractPrice(currentPrice),
+                    list: Number(listPrice.textContent.replace(/[^0-9.]/g, ''))
+                };
+            })
+        );
+
+        expect(prices.length).toBeGreaterThan(0);
+        for (const price of prices) {
+            expect(price.list).toBeGreaterThan(price.current);
+        }
+    });
 });

@@ -37,6 +37,29 @@ export class ProductsListAndFilter {
             has: page.getByRole('heading', { name: "Today's featured deals" })
         });
         this.featuredDealCards = this.featuredDealsSection.locator('.product-card');
+
+        this.customerReviewsFilter = page.locator('.filter-group').filter({
+            has: page.getByRole('heading', { name: 'Customer Reviews' })
+        });
+        this.customerReviewOptions = this.customerReviewsFilter.locator('.filter-link');
+        this.productRatings = this.productCard.locator('.stars[aria-label]');
+
+        this.priceFilter = page.locator('.filter-group').filter({
+            has: page.getByRole('heading', { name: 'Price' })
+        });
+        this.priceOptions = this.priceFilter.locator('.filter-link');
+        this.activePriceOption = this.priceFilter.locator('.filter-link.active');
+
+        this.availabilityFilter = page.locator('.filter-group').filter({
+            has: page.getByRole('heading', { name: 'Availability' })
+        });
+        this.inStockCheckbox = this.availabilityFilter.getByRole('checkbox', {
+            name: 'Include in-stock only'
+        });
+        this.dealsOnlyCheckbox = this.availabilityFilter.getByRole('checkbox', {
+            name: 'Deals only'
+        });
+        this.productPrices = this.productGrid.locator('.product-card .price-now');
     }
 
     async addFirstItemToTheCard() {
