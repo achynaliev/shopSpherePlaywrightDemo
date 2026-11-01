@@ -22,7 +22,7 @@ export default function ProductCard({ product }) {
   };
 
   return (
-    <article className="card product-card">
+    <article className="card product-card" data-category={product.category}>
       <Link to={`/product/${product.slug}`} className="product-card-link">
         <ProductImage product={product} />
         <h3 className="product-card-title">{product.title}</h3>
