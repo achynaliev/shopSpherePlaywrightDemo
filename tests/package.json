@@ -6,8 +6,14 @@
   "description": "Playwright end-to-end tests for ShopSphere.",
   "scripts": {
     "test": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:p0": "playwright test --grep @p0",
+    "test:p1": "playwright test --grep @p1",
+    "test:p2": "playwright test --grep @p2",
     "test:azure": "playwright test --config=playwright.service.config.js",
-    "test:ui": "playwright test --ui",
+    "test:azure:smoke": "playwright test --config=playwright.service.config.js --grep @smoke",
+    "test:azure:regression": "playwright test --config=playwright.service.config.js --grep @regression",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report",
     "install-browsers": "playwright install chromium"

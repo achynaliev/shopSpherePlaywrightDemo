@@ -42,19 +42,20 @@ test.describe('Registration Tests', () => {
         }
     });
 
-    test('should register a new user successfully', async ({ page }) => {
-        await page.goto('/');
-        await page.locator('a.nav-item[href*="/login"]').click();
-        await page.getByText('Create your ShopSphere account', { exact: true }).click();
-        await page.getByPlaceholder('First and last name').fill('John Doe');
-        await page.locator('input[type="email"]').fill(process.env.REGISTRATION_EMAIL);
-        await page.getByPlaceholder('At least 8 characters').fill(process.env.PASSWORD);
-        await page.getByLabel('Re-enter password').fill(process.env.PASSWORD);
-        await page.getByRole('button', { name: 'Create your account' }).click();
-        await expect(page.getByRole('button', { name: /Hello, John/ })).toBeVisible();
-    });
+    test('should register a new user successfully', { tag: ['@p0', '@smoke', '@regression'] },
+        async ({ page }) => {
+            await page.goto('/');
+            await page.locator('a.nav-item[href*="/login"]').click();
+            await page.getByText('Create your ShopSphere account', { exact: true }).click();
+            await page.getByPlaceholder('First and last name').fill('John Doe');
+            await page.locator('input[type="email"]').fill(process.env.REGISTRATION_EMAIL);
+            await page.getByPlaceholder('At least 8 characters').fill(process.env.PASSWORD);
+            await page.getByLabel('Re-enter password').fill(process.env.PASSWORD);
+            await page.getByRole('button', { name: 'Create your account' }).click();
+            await expect(page.getByRole('button', { name: /Hello, John/ })).toBeVisible();
+        });
 
-    test('should show server error for duplicate email', async ({ page }) => {
+    test('should show server error for duplicate email', { tag: ['@p1', '@regression'] }, async ({ page }) => {
         await page.goto('/');
         await page.locator('a.nav-item[href*="/login"]').click();
         await page.getByText('Create your ShopSphere account', { exact: true }).click();
@@ -66,7 +67,7 @@ test.describe('Registration Tests', () => {
         await expect(page.locator('.alert')).toHaveText('An account with this email already exists.');
     });
 
-    test('should show client error when passwords do not match', async ({ page }) => {
+    test('should show client error when passwords do not match', { tag: ['@p2', '@regression'] }, async ({ page }) => {
         await page.goto('/');
         await page.locator('a.nav-item[href*="/login"]').click();
         await page.getByText('Create your ShopSphere account', { exact: true }).click();

@@ -22,35 +22,38 @@ const DB_PATH = process.env.E2E_DATABASE_PATH
     : path.join(ROOT_DIR, 'server/data/shop.db');
 
 test.describe('Login Tests', () => {
-    test('should login successfully with correct credentials', async ({ page }) => {
-        await page.goto('/');
-        await page.locator('a.nav-item[href*="/login"]').click();
-        await page.locator('input[type="email"]').fill(process.env.REGULAR_USER);
-        await page.locator('input[type="password"]').fill(process.env.PASSWORD);
-        await page.getByRole('button', { name: 'Sign in' }).click();
-        await expect(page.getByRole('button', { name: /Hello, Atai/ })).toBeVisible();
-    });
+    test('should login successfully with correct credentials', { tag: ['@p0', '@smoke', '@regression'] },
+        async ({ page }) => {
+            await page.goto('/');
+            await page.locator('a.nav-item[href*="/login"]').click();
+            await page.locator('input[type="email"]').fill(process.env.REGULAR_USER);
+            await page.locator('input[type="password"]').fill(process.env.PASSWORD);
+            await page.getByRole('button', { name: 'Sign in' }).click();
+            await expect(page.getByRole('button', { name: /Hello, Atai/ })).toBeVisible();
+        });
 
-    test('should show error for incorrect password', async ({ page }) => {
-        await page.goto('/');
-        await page.locator('a.nav-item[href*="/login"]').click();
-        await page.locator('input[type="email"]').fill(process.env.REGULAR_USER);
-        await page.locator('input[type="password"]').fill(process.env.WRONG_PASSWORD);
-        await page.getByRole('button', { name: 'Sign in' }).click();
-        await expect(page.locator('.alert')).toHaveText('Incorrect email or password.');
-    });
+    test('should show error for incorrect password', { tag: ['@p0', '@smoke', '@regression'] },
+        async ({ page }) => {
+            await page.goto('/');
+            await page.locator('a.nav-item[href*="/login"]').click();
+            await page.locator('input[type="email"]').fill(process.env.REGULAR_USER);
+            await page.locator('input[type="password"]').fill(process.env.WRONG_PASSWORD);
+            await page.getByRole('button', { name: 'Sign in' }).click();
+            await expect(page.locator('.alert')).toHaveText('Incorrect email or password.');
+        });
 
-    test('log out works correctly, and nothing in the cookies', async ({ page }) => {
-        await page.goto('/');
-        await page.locator('a.nav-item[href*="/login"]').click();
-        await page.locator('input[type="email"]').fill(process.env.REGULAR_USER);
-        await page.locator('input[type="password"]').fill(process.env.PASSWORD);
-        await page.getByRole('button', { name: 'Sign in' }).click();
-        await expect(page.getByRole('button', { name: /Hello, Atai/ })).toBeVisible();
-        await page.locator(".account").click();
-        await page.getByRole('button', { name: 'Sign Out' }).click();
-        await expect(page.locator('a.nav-item[href*="/login"] .nav-line1')).toBeVisible();
-        const cookies = await page.context().cookies();
-        expect(cookies.length).toBe(0);
-    })
+    test('log out works correctly, and nothing in the cookies', { tag: ['@p0', '@smoke', '@regression'] },
+        async ({ page }) => {
+            await page.goto('/');
+            await page.locator('a.nav-item[href*="/login"]').click();
+            await page.locator('input[type="email"]').fill(process.env.REGULAR_USER);
+            await page.locator('input[type="password"]').fill(process.env.PASSWORD);
+            await page.getByRole('button', { name: 'Sign in' }).click();
+            await expect(page.getByRole('button', { name: /Hello, Atai/ })).toBeVisible();
+            await page.locator(".account").click();
+            await page.getByRole('button', { name: 'Sign Out' }).click();
+            await expect(page.locator('a.nav-item[href*="/login"] .nav-line1')).toBeVisible();
+            const cookies = await page.context().cookies();
+            expect(cookies.length).toBe(0);
+        })
 })
