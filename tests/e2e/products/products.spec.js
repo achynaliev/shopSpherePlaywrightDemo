@@ -81,9 +81,13 @@ authenticatedTest.describe('Product list and Filter tests', () => {
         await productsListAndFilter.nextPageButton.click();
         await expect(productsListAndFilter.activePageButton).toHaveText('2');
         await expect(productsListAndFilter.previousPageButton).toBeEnabled();
-
+        const page1Loaded = authenticatedPage.waitForResponse(
+            (res) => res.url().includes('/api/products') && res.url().includes('page=1')
+        );
         await productsListAndFilter.previousPageButton.click();
-        await expect(productsListAndFilter.activePageButton).toHaveText('3');
+        await page1Loaded;
+
+        await expect(productsListAndFilter.activePageButton).toHaveText('2');
         await expect(productsListAndFilter.previousPageButton).toBeDisabled();
     });
 });
