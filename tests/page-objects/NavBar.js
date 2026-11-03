@@ -1,3 +1,5 @@
+import { expect } from '@playwright/test';
+
 export class NavBar {
     constructor(page) {
         this.page = page;
@@ -9,6 +11,12 @@ export class NavBar {
         this.cartPageLogo = page.locator('.cart-link')
         this.headerSub = page.locator('.header-sub');
         this.headerSubLinks = this.headerSub.locator('a');
+        this.cartLink = page.getByRole('link', { name: /^Cart,/ });
+        this.cartCount = this.cartLink.locator('.cart-count');
+    }
+
+    async verifyCartCount(expectedCount) {
+        await expect(this.cartCount).toHaveText(String(expectedCount));
     }
 
     async selectCategory(category) {
@@ -30,4 +38,15 @@ export class NavBar {
         await this.searchButton.click()
     }
 
+    async verifySubnavLinks(links) {
+        for (const { name, url } of links) {
+            const link = this.headerSubLinks.filter({
+                hasText: name
+            });
+            await expect(link).toBeVisible();
+            await link.click();
+            await expect(this.page).toHaveURL(new RegExp(`${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
+            await this.page.goto('/');
+        }
+    }
 }
