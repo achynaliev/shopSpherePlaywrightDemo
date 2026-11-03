@@ -29,6 +29,7 @@ jobs:
       REGULAR_USER: ${{ secrets.E2E_REGULAR_USER }}
       REGULAR_USER2: ${{ secrets.E2E_REGULAR_USER2 }}
       REGULAR_USER3: ${{ secrets.E2E_REGULAR_USER3 }}
+      REGULAR_USER4: ${{ secrets.E2E_REGULAR_USER4 }}
 
     steps:
       - uses: actions/checkout@v4
