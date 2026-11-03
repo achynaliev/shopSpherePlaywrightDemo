@@ -2,9 +2,7 @@ export class NavBar {
     constructor(page) {
         this.page = page;
         this.mainLogo = page.locator('.logo-mark');
-        this.categoryDropdown = page.getByRole('combobox', {
-            name: 'Category'
-        });
+        this.categoryDropdown = page.getByLabel('Category');
         this.searchInput = page.locator("input[type='search']");
         this.searchButton = page.getByRole('button', { name: 'Search' });
         this.ordersPage = page.locator("a[href='/orders']").first()
@@ -14,7 +12,9 @@ export class NavBar {
     }
 
     async selectCategory(category) {
-        await this.categorySelect.selectOption(category);
+        await this.categoryDropdown.selectOption({
+            label: category
+        });
     }
 
     async goToOrdersPage() {
