@@ -2,6 +2,7 @@ import { POManager } from '../../page-objects/POManager.js';
 import { expect, test } from '@playwright/test';
 
 test.describe('Product cart tests as a guest', () => {
+
     test('Add items as guest | Stored in `localStorage` , survives reload', { tag: ['@p0', '@smoke', '@regression'] },
         async ({ page }) => {
             const poManager = new POManager(page);
@@ -68,7 +69,19 @@ test.describe('Product cart tests as a guest', () => {
         async ({ page }) => {
             const poManager = new POManager(page);
             const navBar = poManager.getNavBar();
+            const authenticationPages = poManager.getAuthenticationPages();
             const productsListAndFilter = poManager.getProductsAndFilter();
+            const cartAndCheckout = poManager.getCartAndCheckoutPages();
+
+            // Start with an empty account cart, so leftovers from earlier runs don't add up
+            await page.goto('/');
+            await authenticationPages.goToLoginPage();
+            await authenticationPages.login(process.env.REGULAR_USER3, process.env.PASSWORD);
+            await expect(page.getByRole('button', { name: /Hello, Atai/i })).toBeVisible();
+            await cartAndCheckout.clearCart();
+            await authenticationPages.signOut();
+            await navBar.verifyCartCount(0);
+
             await page.goto('/');
             await navBar.searchItem("wireless headphones");
             await productsListAndFilter.addFirstItemToTheCard()
@@ -84,6 +97,14 @@ test.describe('Product cart tests as a guest', () => {
             expect(guestCart[0].quantity).toBe(1);
 
             // Log in
-            await navBar.goToLoginPage();
+            await authenticationPages.goToLoginPage();
+            await authenticationPages.login(process.env.REGULAR_USER3, process.env.PASSWORD);
+            await navBar.verifyCartCount(1);
+            const guestCartAfterLogin = await page.evaluate(() => {
+                return JSON.parse(localStorage.getItem('ss_guest_cart') || '[]');
+            });
+
+            expect(guestCartAfterLogin).toHaveLength(0);
+            await cartAndCheckout.clearCart();
         });
 });

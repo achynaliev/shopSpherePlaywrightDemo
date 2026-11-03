@@ -18,4 +18,9 @@ export class AuthenticationPages {
         await this.passwordInput.fill(password);
         await this.signInButton.click();
     }
+
+    async signOut() {
+        await this.accountButton.click()
+        await this.singOutButton.click()
+    }
 }
