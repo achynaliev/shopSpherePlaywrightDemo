@@ -13,6 +13,7 @@ export class NavBar {
         this.headerSubLinks = this.headerSub.locator('a');
         this.cartLink = page.getByRole('link', { name: /^Cart,/ });
         this.cartCount = this.cartLink.locator('.cart-count');
+        this.loginLink = page.locator('a.nav-item[href*="/login"]');
     }
 
     async verifyCartCount(expectedCount) {
@@ -36,6 +37,10 @@ export class NavBar {
     async searchItem(item) {
         await this.searchInput.fill(item);
         await this.searchButton.click()
+    }
+
+    async goToLoginPage() {
+        await this.loginLink.click()
     }
 
     async verifySubnavLinks(links) {

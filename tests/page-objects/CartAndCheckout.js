@@ -1,3 +1,5 @@
+import { expect } from '@playwright/test';
+
 export class CartAndCheckoutPages {
     constructor(page) {
         this.page = page;
@@ -11,6 +13,8 @@ export class CartAndCheckoutPages {
         this.cardExpiry = page.getByRole('textbox', { name: 'Expiry (MM/YY)' })
         this.cvc = page.getByRole('textbox', { name: 'Security code' })
         this.placeOrderButton = page.getByRole('button', { name: 'Place your order' })
+
+        this.quantityDropdown = page.getByLabel('Qty:');
     }
 
     async checkout() {
@@ -33,5 +37,13 @@ export class CartAndCheckoutPages {
 
     async placeOrder() {
         await this.placeOrderButton.click()
+    }
+
+    async selectQuantity(quantity) {
+        await this.quantityDropdown.selectOption(String(quantity));
+    }
+
+    async verifySelectedQuantity(quantity) {
+        await expect(this.quantityDropdown).toHaveValue(String(quantity));
     }
 }
