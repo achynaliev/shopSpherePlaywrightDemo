@@ -60,6 +60,7 @@ export class ProductsListAndFilter {
             name: 'Deals only'
         });
         this.productPrices = this.productGrid.locator('.product-card .price-now');
+        this.clearAllFiltersButton = page.getByRole('button', { name: '‹ Clear all filters' });
     }
 
     async addFirstItemToTheCard() {

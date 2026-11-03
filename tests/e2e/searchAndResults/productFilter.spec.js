@@ -141,4 +141,29 @@ authenticatedTest.describe('Product Filter tests', () => {
                 expect(price.list).toBeGreaterThan(price.current);
             }
         });
+
+    authenticatedTest('Clearing all filters works correctly', { tag: ['@p0', '@smoke', '@regression'] },
+        async ({ authenticatedPage }) => {
+            const poManager = new POManager(authenticatedPage);
+            const productsListAndFilter = poManager.getProductsAndFilter();
+            await authenticatedPage.goto('/search');
+            await expect(productsListAndFilter.departmentFilter).toBeVisible();
+            await expect(productsListAndFilter.departmentOptions).toHaveCount(8);
+            await expect(productsListAndFilter.activeDepartment).toHaveText('Any department');
+
+            await productsListAndFilter.departmentFilter
+                .getByRole('button', { name: /Electronics/ })
+                .click();
+            await expect(productsListAndFilter.activeDepartment).toContainText('Electronics');
+            await expect(productsListAndFilter.productCard.first()).toBeVisible();
+            await expect(productsListAndFilter.productCard).not.toHaveCount(0);
+
+            await expect(authenticatedPage).toHaveURL(/\/search\?category=Electronics$/);
+
+            await productsListAndFilter.clearAllFiltersButton.click();
+            await expect(productsListAndFilter.activeDepartment).toHaveText('Any department');
+            await expect(productsListAndFilter.productCard.first()).toBeVisible();
+            await expect(productsListAndFilter.productCard).not.toHaveCount(0);
+            await expect(authenticatedPage).toHaveURL(/\/search$/);
+        });
 });
