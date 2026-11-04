@@ -10,6 +10,7 @@ authenticatedTest('complete a full order e2e', { tag: ['@p0', '@smoke', '@regres
         const navBar = poManager.getNavBar();
         const productsListAndFilter = poManager.getProductsAndFilter();
         const cartAndCheckoutPages = poManager.getCartAndCheckoutPages()
+        const ordersPage = poManager.getOrdersPage();
 
         await navBar.searchItem("wireless headphones");
         await productsListAndFilter.addFirstItemToTheCard()
@@ -21,4 +22,13 @@ authenticatedTest('complete a full order e2e', { tag: ['@p0', '@smoke', '@regres
 
         await cartAndCheckoutPages.placeOrder()
         await expect(authenticatedPage.getByRole('heading', { name: '✅ Order placed, thank you!' })).toBeVisible()
+
+        //getting order-id and matching it on order history page
+        const orderText = await authenticatedPage.locator('p.muted').innerText();
+        const orderId = orderText.match(/Order #\s*(\d{3}-\d{7}-\d{7})/)?.[1];
+        expect(orderId).toBeTruthy();
+        await navBar.goToOrdersPage();
+
+        const orderIdFromOrdersPage = await ordersPage.getOrderId();
+        expect(orderIdFromOrdersPage).toBe(orderId);
     });
