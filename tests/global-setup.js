@@ -14,6 +14,7 @@ const USERS = [
     { key: 'REGULAR_USER2', name: 'atai session' },
     { key: 'REGULAR_USER3', name: 'Atai Shopper' },
     { key: 'REGULAR_USER4', name: 'Atai Shopper Two' },
+    { key: 'REGULAR_USER6', name: 'Atai Chynaliev' }
 ];
 
 // Registers the test accounts so the suite also runs against a fresh database (e.g. in CI).

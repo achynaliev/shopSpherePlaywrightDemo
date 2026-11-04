@@ -26,6 +26,7 @@ export class CartAndCheckoutPages {
         this.proceedToCheckoutBtn = this.orderSummary.getByRole('button', {
             name: 'Proceed to checkout'
         });
+        this.cardName = this.page.getByRole('textbox', { name: 'Name on card' });
     }
 
     async checkout() {

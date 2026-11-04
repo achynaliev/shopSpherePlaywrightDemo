@@ -13,6 +13,7 @@ dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 for (const key of [
     'REGULAR_USER3',
     'REGULAR_USER4',
+    'REGULAR_USER6',
     'PASSWORD',
     'REGISTRATION_EMAIL',
     'WRONG_PASSWORD'
@@ -59,6 +60,14 @@ export const authenticatedTest = base.extend({
             process.env.REGULAR_USER4
         );
     },
+    // Account 3
+    authenticatedPage3: async ({ browser }, use) => {
+        await createAuthenticatedPage(
+            browser,
+            use,
+            process.env.REGULAR_USER6
+        );
+    }
 });
 
 export { expect };
