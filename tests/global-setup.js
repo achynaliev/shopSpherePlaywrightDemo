@@ -10,10 +10,10 @@ dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 
 // Accounts the specs sign in with. The names matter: specs assert on "Hello, <first name>".
 const USERS = [
-    { key: 'REGULAR_USER', name: 'Atai Regular' },
+    { key: 'REGULAR_USER', name: 'Atai Chynaliev' },
     { key: 'REGULAR_USER2', name: 'atai session' },
-    { key: 'REGULAR_USER3', name: 'Atai Shopper' },
-    { key: 'REGULAR_USER4', name: 'Atai Shopper Two' },
+    { key: 'REGULAR_USER3', name: 'Atai Chynaliev' },
+    { key: 'REGULAR_USER4', name: 'Atai Chynaliev' },
     { key: 'REGULAR_USER6', name: 'Atai Chynaliev' }
 ];
 
