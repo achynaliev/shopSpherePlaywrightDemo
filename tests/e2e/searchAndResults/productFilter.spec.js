@@ -18,13 +18,13 @@ authenticatedTest.describe('Product Filter tests', () => {
                 .click();
             await expect(productsListAndFilter.activeDepartment).toContainText('Electronics');
             await expect(productsListAndFilter.productCard.first()).toBeVisible();
-            await expect(productsListAndFilter.productCard).not.toHaveCount(0);
-            const categories = await productsListAndFilter.productCard.evaluateAll(
-                cards => cards.map(card => card.getAttribute('data-category'))
-            );
-
-            expect(categories.length).toBeGreaterThan(0);
-            expect(categories.every(category => category === 'Electronics')).toBe(true);
+            // Results load after the filter is marked active, so retry until the unfiltered cards are replaced.
+            await expect.poll(async () => {
+                const categories = await productsListAndFilter.productCard.evaluateAll(
+                    cards => cards.map(card => card.getAttribute('data-category'))
+                );
+                return categories.length > 0 && categories.every(category => category === 'Electronics');
+            }).toBe(true);
         });
 
     authenticatedTest('Filter by customer rating works correctly', { tag: ['@p1', '@regression'] },
@@ -38,15 +38,16 @@ authenticatedTest.describe('Product Filter tests', () => {
             await productsListAndFilter.customerReviewsFilter
                 .getByRole('button', { name: /4\.0 out of 5 stars/ })
                 .click();
+            await expect(authenticatedPage).toHaveURL(/minRating=4/);
             await expect(productsListAndFilter.productCard.first()).toBeVisible();
-            const ratings = await productsListAndFilter.productRatings.all();
 
-            for (const rating of ratings) {
-                const ariaLabel = await rating.getAttribute('aria-label');
-                const score = Number.parseFloat(ariaLabel);
-
-                expect(score).toBeGreaterThanOrEqual(4);
-            }
+            // Results load after the URL changes, so retry until the unfiltered cards are replaced.
+            await expect.poll(async () => {
+                const labels = await productsListAndFilter.productRatings.evaluateAll(
+                    (els) => els.map((el) => el.getAttribute('aria-label'))
+                );
+                return labels.length > 0 && labels.every((label) => Number.parseFloat(label) >= 4);
+            }).toBe(true);
         });
 
     authenticatedTest('Filter by price works correctly', { tag: ['@p0', '@smoke', '@regression'] },

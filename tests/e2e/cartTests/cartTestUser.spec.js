@@ -69,7 +69,7 @@ authenticatedTest.describe('Cart tests for authenticated users', () => {
         });
 
     authenticatedTest('Add items to the cart, logout and login, the cart is not empty', { tag: ['@p0', '@smoke', '@regression'] },
-        async ({ authenticatedPage2 }) => {
+        async ({ authenticatedPage2, workerUsers }) => {
             const poManager = new POManager(authenticatedPage2);
             const navBar = poManager.getNavBar();
             const productsListAndFilter = poManager.getProductsAndFilter();
@@ -84,7 +84,7 @@ authenticatedTest.describe('Cart tests for authenticated users', () => {
             await navBar.verifyCartCount(0);
             // Login
             await authenticationPages.goToLoginPage();
-            await authenticationPages.login(process.env.REGULAR_USER4, process.env.PASSWORD);
+            await authenticationPages.login(workerUsers.REGULAR_USER4, process.env.PASSWORD);
             await navBar.verifyCartCount(1);
         });
 });

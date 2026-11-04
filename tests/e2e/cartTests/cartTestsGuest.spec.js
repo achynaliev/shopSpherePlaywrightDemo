@@ -1,5 +1,5 @@
 import { POManager } from '../../page-objects/POManager.js';
-import { expect, test } from '@playwright/test';
+import { authenticatedTest as test, expect } from '../../fixtures/auth.fixture.js';
 
 test.describe('Product cart tests as a guest', () => {
 
@@ -66,7 +66,7 @@ test.describe('Product cart tests as a guest', () => {
         });
 
     test('Add item as guest and it persist when user logs in', { tag: ['@p0', '@smoke', '@regression'] },
-        async ({ page }) => {
+        async ({ page, workerUsers }) => {
             const poManager = new POManager(page);
             const navBar = poManager.getNavBar();
             const authenticationPages = poManager.getAuthenticationPages();
@@ -76,7 +76,7 @@ test.describe('Product cart tests as a guest', () => {
             // Start with an empty account cart, so leftovers from earlier runs don't add up
             await page.goto('/');
             await authenticationPages.goToLoginPage();
-            await authenticationPages.login(process.env.REGULAR_USER3, process.env.PASSWORD);
+            await authenticationPages.login(workerUsers.REGULAR_USER3, process.env.PASSWORD);
             await expect(page.getByRole('button', { name: /Hello, Atai/i })).toBeVisible();
             await cartAndCheckout.clearCart();
             await authenticationPages.signOut();
@@ -98,7 +98,7 @@ test.describe('Product cart tests as a guest', () => {
 
             // Log in
             await authenticationPages.goToLoginPage();
-            await authenticationPages.login(process.env.REGULAR_USER3, process.env.PASSWORD);
+            await authenticationPages.login(workerUsers.REGULAR_USER3, process.env.PASSWORD);
             await navBar.verifyCartCount(1);
             const guestCartAfterLogin = await page.evaluate(() => {
                 return JSON.parse(localStorage.getItem('ss_guest_cart') || '[]');
