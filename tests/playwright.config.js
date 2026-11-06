@@ -5,9 +5,11 @@ import { defineConfig, devices } from '@playwright/test';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.E2E_PORT) || 4173;
 const BASE_URL = process.env.E2E_BASE_URL || `http://localhost:${PORT}`;
+// API specs hit the same app by default; set API_BASE_URL to aim them at another host (e.g. staging).
+const API_BASE_URL = process.env.API_BASE_URL || BASE_URL;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: '.',
   globalSetup: './global-setup.js',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
@@ -23,7 +25,14 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], headless: !!process.env.CI } },
+    // Keep chromium first: global-setup.js reads projects[0].use.baseURL.
+    { name: 'chromium', testDir: './e2e', use: { ...devices['Desktop Chrome'], headless: !!process.env.CI } },
+    // Browserless API specs. Run alone with `npm run test:api`.
+    {
+      name: 'api',
+      testDir: './api',
+      use: { baseURL: API_BASE_URL, extraHTTPHeaders: { Accept: 'application/json' } },
+    },
     // Uncomment after `npx playwright install firefox webkit`:
     // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     // { name: 'webkit', use: { ...devices['Desktop Safari'] } },

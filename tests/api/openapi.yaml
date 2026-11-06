@@ -1,0 +1,868 @@
+openapi: 3.0.3
+info:
+  title: ShopSphere API
+  version: 1.0.0
+  description: |
+    REST API for the ShopSphere e-commerce app (server/src). Generated from the Express routes.
+
+    **Conventions**
+    - All money values are integer **cents** (e.g. `17999` = $179.99). Exception: the
+      `minPrice` / `maxPrice` query params on `GET /api/products` are in **dollars**.
+    - Auth is a JWT in the httpOnly cookie `ss_token` (7-day expiry), set by register/login.
+    - Every error response is `{ "error": "<message>" }`.
+      Validation (zod) errors are 400 with the form `"<field.path>: <message>"`, e.g.
+      `"shipping.postalCode: Enter a valid postal code"` (only the first issue is reported).
+    - Malformed JSON body → 400 `"Malformed JSON body"`. Unknown `/api/*` path → 404 `"Not found"`.
+    - Endpoints marked with the cookie lock return 401 `"Please sign in to continue."` when signed out.
+
+    **Demo / test data**
+    - Demo user (seeded when not in production): `demo@shopsphere.dev` / `demo1234`.
+    - Card `4000 0000 0000 0002` always declines (402). Any other Luhn-valid number succeeds,
+      e.g. `4242 4242 4242 4242`.
+servers:
+  - url: http://localhost:4173
+    description: Local preview build (default for the Playwright `api` project)
+  - url: http://localhost:4000
+    description: Local server (npm run dev)
+
+tags:
+  - name: Health
+  - name: Auth
+  - name: Products
+  - name: Reviews
+  - name: Cart
+  - name: Orders
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: ss_token
+
+  parameters:
+    IdOrSlug:
+      name: idOrSlug
+      in: path
+      required: true
+      description: Numeric product id (e.g. `1`) or slug (e.g. `auralis-pro-wireless-noise-cancelling-headphones`).
+      schema: { type: string }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: integer }
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    BadRequest:
+      description: Validation failed or malformed JSON
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'email: Enter a valid email address' }
+    Unauthorized:
+      description: Not signed in
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'Please sign in to continue.' }
+    ProductNotFound:
+      description: Product id/slug does not exist
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'Product not found.' }
+    OrderNotFound:
+      description: Order does not exist or belongs to another user
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'Order not found.' }
+    TooManyRequests:
+      description: Auth rate limit hit (per IP per 15 min; 20 in prod, 1000 otherwise, or AUTH_RATE_LIMIT)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: 'Too many attempts. Please wait a few minutes and try again.' }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+
+    Ok:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean, example: true }
+
+    User:
+      type: object
+      required: [id, name, email, createdAt]
+      properties:
+        id: { type: integer, example: 42 }
+        name: { type: string, example: Demo Shopper }
+        email: { type: string, format: email, example: demo@shopsphere.dev }
+        createdAt: { type: string, description: 'SQLite datetime, UTC (YYYY-MM-DD HH:MM:SS)', example: '2026-11-01 10:15:00' }
+
+    UserResponse:
+      type: object
+      required: [user]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80, description: Trimmed }
+        email: { type: string, format: email, maxLength: 254, description: Trimmed and lower-cased }
+        password: { type: string, minLength: 8, maxLength: 128 }
+      example: { name: Jane Tester, email: jane@example.com, password: secret123 }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+      example: { email: demo@shopsphere.dev, password: demo1234 }
+
+    UpdateProfileRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string, minLength: 1, maxLength: 128 }
+        newPassword: { type: string, minLength: 8, maxLength: 128 }
+
+    Product:
+      type: object
+      required: [id, slug, title, brand, category, description, features, price, listPrice, stock, emoji,
+                 colorFrom, colorTo, imageUrl, rating, ratingCount, isFeatured, createdAt]
+      properties:
+        id: { type: integer, example: 1 }
+        slug: { type: string, example: auralis-pro-wireless-noise-cancelling-headphones }
+        title: { type: string, example: Auralis Pro Wireless Noise-Cancelling Headphones }
+        brand: { type: string, example: Auralis }
+        category: { type: string, example: Electronics }
+        description: { type: string }
+        features: { type: array, items: { type: string } }
+        price: { type: integer, description: Cents, example: 17999 }
+        listPrice: { type: integer, nullable: true, description: 'Cents; null when not discounted', example: 24999 }
+        stock: { type: integer, example: 42 }
+        emoji: { type: string, example: '🎧' }
+        colorFrom: { type: string, example: '#dbeafe' }
+        colorTo: { type: string, example: '#93c5fd' }
+        imageUrl: { type: string, nullable: true }
+        rating: { type: number, description: 'Average 0–5, 2 decimals', example: 4.38 }
+        ratingCount: { type: integer, example: 8 }
+        isFeatured: { type: boolean }
+        createdAt: { type: string }
+
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          required: [ratingBreakdown]
+          properties:
+            ratingBreakdown:
+              type: object
+              description: Count of reviews per star rating
+              properties:
+                '1': { type: integer }
+                '2': { type: integer }
+                '3': { type: integer }
+                '4': { type: integer }
+                '5': { type: integer }
+              example: { '1': 0, '2': 1, '3': 1, '4': 3, '5': 3 }
+
+    ProductList:
+      type: object
+      required: [products, page, limit, total, totalPages]
+      properties:
+        products: { type: array, items: { $ref: '#/components/schemas/Product' } }
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 12 }
+        total: { type: integer, description: Total matching products across all pages }
+        totalPages: { type: integer, description: 'ceil(total/limit), minimum 1' }
+
+    ProductResponse:
+      type: object
+      required: [product]
+      properties:
+        product: { $ref: '#/components/schemas/Product' }
+
+    Category:
+      type: object
+      required: [name, count]
+      properties:
+        name: { type: string, example: Electronics }
+        count: { type: integer, example: 8 }
+
+    Review:
+      type: object
+      required: [id, rating, title, body, author, verifiedPurchase, isMine, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        title: { type: string }
+        body: { type: string }
+        author: { type: string }
+        verifiedPurchase: { type: boolean, description: Author has a non-cancelled order containing this product }
+        isMine: { type: boolean, description: True when the signed-in user wrote it (always false for guests) }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    ReviewRequest:
+      type: object
+      required: [rating, title, body]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        title: { type: string, minLength: 1, maxLength: 120 }
+        body: { type: string, minLength: 10, maxLength: 4000 }
+      example: { rating: 5, title: Great sound, body: Battery lasts forever and ANC is excellent. }
+
+    CartItem:
+      type: object
+      required: [quantity, product]
+      properties:
+        quantity: { type: integer, minimum: 1, maximum: 10 }
+        product: { $ref: '#/components/schemas/Product' }
+
+    Cart:
+      type: object
+      required: [items, count, subtotal, shipping, tax, total, freeShippingThreshold]
+      description: |
+        Totals rules: shipping = 0 when subtotal is 0 or ≥ 3500 (¢), else 599.
+        tax = round(subtotal × 0.08). total = subtotal + shipping + tax.
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CartItem' } }
+        count: { type: integer, description: Sum of quantities }
+        subtotal: { type: integer }
+        shipping: { type: integer }
+        tax: { type: integer }
+        total: { type: integer }
+        freeShippingThreshold: { type: integer, example: 3500 }
+
+    AddToCartRequest:
+      type: object
+      required: [productId]
+      properties:
+        productId: { type: integer, minimum: 1 }
+        quantity: { type: integer, minimum: 1, maximum: 10, default: 1, description: Added to the existing line quantity }
+      example: { productId: 1, quantity: 2 }
+
+    UpdateCartRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity: { type: integer, minimum: 1, maximum: 10, description: Replaces the line quantity }
+
+    MergeCartRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/AddToCartRequest' }
+
+    ShippingAddress:
+      type: object
+      required: [fullName, line1, city, state, postalCode, country]
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 100 }
+        line1: { type: string, minLength: 3, maxLength: 200 }
+        line2: { type: string, maxLength: 200, default: '' }
+        city: { type: string, minLength: 2, maxLength: 100 }
+        state: { type: string, minLength: 2, maxLength: 100 }
+        postalCode: { type: string, pattern: '^[A-Za-z0-9 -]{3,10}$' }
+        country: { type: string, minLength: 2, maxLength: 60 }
+        phone: { type: string, maxLength: 30, default: '' }
+
+    PaymentInput:
+      type: object
+      required: [nameOnCard, cardNumber, expMonth, expYear, cvc]
+      properties:
+        nameOnCard: { type: string, minLength: 2, maxLength: 100 }
+        cardNumber: { type: string, description: 'Spaces/dashes stripped; 13–19 digits; must pass Luhn' }
+        expMonth: { type: integer, minimum: 1, maximum: 12 }
+        expYear: { type: integer, minimum: 2000, maximum: 2100, description: 'Must not be in the past (400 "payment.expYear: Your card has expired")' }
+        cvc: { type: string, pattern: '^\d{3,4}$' }
+
+    CheckoutRequest:
+      type: object
+      required: [shipping, payment]
+      properties:
+        shipping: { $ref: '#/components/schemas/ShippingAddress' }
+        payment: { $ref: '#/components/schemas/PaymentInput' }
+      example:
+        shipping: { fullName: Jane Tester, line1: 123 Main St, city: Austin, state: TX, postalCode: '78701', country: United States }
+        payment: { nameOnCard: Jane Tester, cardNumber: '4242 4242 4242 4242', expMonth: 12, expYear: 2030, cvc: '123' }
+
+    OrderItem:
+      type: object
+      required: [id, productId, slug, title, emoji, colorFrom, colorTo, price, quantity]
+      properties:
+        id: { type: integer }
+        productId: { type: integer, nullable: true }
+        slug: { type: string, nullable: true }
+        title: { type: string }
+        emoji: { type: string }
+        colorFrom: { type: string, nullable: true }
+        colorTo: { type: string, nullable: true }
+        price: { type: integer, description: Unit price in cents at time of purchase }
+        quantity: { type: integer }
+
+    Order:
+      type: object
+      required: [id, orderNumber, status, subtotal, shipping, tax, total, shippingAddress, payment, createdAt, estimatedDelivery, items]
+      properties:
+        id: { type: integer }
+        orderNumber: { type: string, pattern: '^\d{3}-\d{7}-\d{7}$', example: '112-4839201-5528193' }
+        status: { type: string, enum: [placed, cancelled], description: 'New orders are "placed"; other statuses may exist in the DB' }
+        subtotal: { type: integer }
+        shipping: { type: integer }
+        tax: { type: integer }
+        total: { type: integer }
+        shippingAddress: { $ref: '#/components/schemas/ShippingAddress' }
+        payment:
+          type: object
+          properties:
+            brand: { type: string, enum: [Visa, Mastercard, American Express, Discover, Card] }
+            last4: { type: string, example: '4242' }
+        createdAt: { type: string }
+        estimatedDelivery: { type: string, format: date-time, description: createdAt + 4 days }
+        items: { type: array, items: { $ref: '#/components/schemas/OrderItem' } }
+
+    OrderResponse:
+      type: object
+      required: [order]
+      properties:
+        order: { $ref: '#/components/schemas/Order' }
+
+paths:
+  /api/health:
+    get:
+      operationId: healthCheck
+      security: []
+      tags: [Health]
+      summary: Health check
+      responses:
+        '200':
+          description: Server is up
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+
+  # ---------------------------------------------------------------- Auth
+  /api/auth/register:
+    post:
+      operationId: register
+      security: []
+      tags: [Auth]
+      summary: Create an account and sign in
+      description: Sets the `ss_token` cookie. Rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Created; session cookie set
+          headers:
+            Set-Cookie: { schema: { type: string }, description: 'ss_token=...; HttpOnly; SameSite=Lax' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'An account with this email already exists.' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/auth/login:
+    post:
+      operationId: login
+      security: []
+      tags: [Auth]
+      summary: Sign in
+      description: Sets the `ss_token` cookie. Rate limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Signed in; session cookie set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Wrong email or password (same message for both)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'Incorrect email or password.' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/auth/logout:
+    post:
+      operationId: logout
+      security: []
+      tags: [Auth]
+      summary: Sign out (clears the cookie)
+      description: Works whether or not you are signed in.
+      responses:
+        '200':
+          description: Cookie cleared
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+
+  /api/auth/me:
+    get:
+      operationId: getMe
+      security: []
+      tags: [Auth]
+      summary: Current user
+      description: 'Never 401 — returns `{ "user": null }` for guests or invalid/expired tokens.'
+      responses:
+        '200':
+          description: Current user or null
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    type: object
+                    nullable: true
+                    allOf: [{ $ref: '#/components/schemas/User' }]
+    put:
+      operationId: updateProfile
+      tags: [Auth]
+      summary: Update profile name
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileRequest' }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/auth/me/password:
+    put:
+      operationId: changePassword
+      tags: [Auth]
+      summary: Change password
+      description: Rate limited. Session stays valid after the change.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ok' }
+        '400':
+          description: Validation failed, or current password is wrong (`Current password is incorrect.`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------------------------------------------------------------- Products
+  /api/products:
+    get:
+      operationId: listProducts
+      security: []
+      tags: [Products]
+      summary: List / search / filter products (paginated)
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 }, description: 'Space-separated terms; every term must match title, brand, category or description (first 8 terms used)' }
+        - { name: category, in: query, schema: { type: string, maxLength: 60 }, description: 'Exact match, case-sensitive (e.g. Electronics)' }
+        - { name: minPrice, in: query, schema: { type: number, minimum: 0 }, description: In dollars }
+        - { name: maxPrice, in: query, schema: { type: number, minimum: 0 }, description: In dollars }
+        - { name: minRating, in: query, schema: { type: number, minimum: 0, maximum: 5 } }
+        - { name: inStock, in: query, schema: { type: string, enum: ['true', 'false'] }, description: '"true" → stock > 0; "false" applies no filter' }
+        - { name: featured, in: query, schema: { type: string, enum: ['true', 'false'] }, description: '"true" → featured only; "false" applies no filter' }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [featured, price-asc, price-desc, rating, newest], default: featured }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 48, default: 12 } }
+      responses:
+        '200':
+          description: Page of products
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /api/products/categories:
+    get:
+      operationId: listCategories
+      security: []
+      tags: [Products]
+      summary: Categories with product counts (alphabetical)
+      responses:
+        '200':
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [categories]
+                properties:
+                  categories: { type: array, items: { $ref: '#/components/schemas/Category' } }
+
+  /api/products/{idOrSlug}:
+    get:
+      operationId: getProduct
+      security: []
+      tags: [Products]
+      summary: Product detail with rating breakdown
+      parameters: [{ $ref: '#/components/parameters/IdOrSlug' }]
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [product]
+                properties:
+                  product: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { $ref: '#/components/responses/ProductNotFound' }
+
+  /api/products/{idOrSlug}/related:
+    get:
+      operationId: getRelatedProducts
+      security: []
+      tags: [Products]
+      summary: Up to 4 products in the same category (excluding this one), best-rated first
+      parameters: [{ $ref: '#/components/parameters/IdOrSlug' }]
+      responses:
+        '200':
+          description: Related products
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [products]
+                properties:
+                  products: { type: array, maxItems: 4, items: { $ref: '#/components/schemas/Product' } }
+        '404': { $ref: '#/components/responses/ProductNotFound' }
+
+  # ---------------------------------------------------------------- Reviews
+  /api/products/{idOrSlug}/reviews:
+    get:
+      operationId: listReviews
+      security: []
+      tags: [Reviews]
+      summary: List reviews for a product
+      parameters:
+        - $ref: '#/components/parameters/IdOrSlug'
+        - name: sort
+          in: query
+          description: '"top" = highest rating first; anything else = newest first'
+          schema: { type: string, enum: [newest, top], default: newest }
+      responses:
+        '200':
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reviews]
+                properties:
+                  reviews: { type: array, items: { $ref: '#/components/schemas/Review' } }
+        '404': { $ref: '#/components/responses/ProductNotFound' }
+    post:
+      operationId: upsertReview
+      tags: [Reviews]
+      summary: Create or replace your review (one per user per product)
+      description: Posting again overwrites your previous review. Recomputes product rating/ratingCount.
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdOrSlug' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewRequest' }
+      responses:
+        '201':
+          description: Saved; returns the product with updated rating (no ratingBreakdown)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ProductNotFound' }
+
+  /api/products/{idOrSlug}/reviews/mine:
+    delete:
+      operationId: deleteMyReview
+      tags: [Reviews]
+      summary: Delete your review
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/IdOrSlug' }]
+      responses:
+        '200':
+          description: Deleted; returns the product with updated rating
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: Product not found, or you have no review on it (`You haven't reviewed this product.`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ---------------------------------------------------------------- Cart
+  /api/cart:
+    get:
+      operationId: getCart
+      tags: [Cart]
+      summary: Get your cart with totals
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: addToCart
+      tags: [Cart]
+      summary: Add a product (adds to existing quantity)
+      description: Resulting line quantity may not exceed min(10, stock).
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddToCartRequest' }
+      responses:
+        '201':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/ProductNotFound' }
+        '409':
+          description: 'Out of stock (`This item is out of stock.`) or over the cap (`Only N available for this item.`)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      operationId: clearCart
+      tags: [Cart]
+      summary: Empty your cart
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Empty cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cart/merge:
+    post:
+      operationId: mergeCart
+      tags: [Cart]
+      summary: Merge a guest cart into your account cart
+      description: |
+        Lenient: unknown or out-of-stock products are silently skipped, and quantities are
+        clamped to min(10, stock) instead of erroring. Duplicates add up.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MergeCartRequest' }
+      responses:
+        '200':
+          description: Merged cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cart/{productId}:
+    put:
+      operationId: updateCartItem
+      tags: [Cart]
+      summary: Set quantity of a cart line
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProductId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCartRequest' }
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: 'Not in your cart (`Item is not in your cart.`)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Out of stock or quantity above available stock
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      operationId: removeCartItem
+      tags: [Cart]
+      summary: Remove a cart line
+      description: Idempotent — returns 200 even if the product was not in the cart.
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProductId' }]
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Orders
+  /api/orders:
+    get:
+      operationId: listOrders
+      tags: [Orders]
+      summary: List your orders (newest first)
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [orders]
+                properties:
+                  orders: { type: array, items: { $ref: '#/components/schemas/Order' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: placeOrder
+      tags: [Orders]
+      summary: Checkout — place an order from your cart
+      description: |
+        On success: order created with status `placed`, product stock decremented, cart emptied.
+        Card details are never stored (only brand + last4).
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CheckoutRequest' }
+      responses:
+        '201':
+          description: Order placed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '400':
+          description: |
+            Validation error (e.g. `payment.cardNumber: Card number is invalid`),
+            expired card (`payment.expYear: Your card has expired`), or empty cart (`Your cart is empty.`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402':
+          description: Card declined (card 4000 0000 0000 0002)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: 'Your card was declined. Try a different card.' }
+        '409':
+          description: A cart item is out of stock or has less stock than the cart quantity
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [Orders]
+      summary: Get one of your orders
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+
+  /api/orders/{id}/cancel:
+    post:
+      operationId: cancelOrder
+      tags: [Orders]
+      summary: Cancel an order (restocks items)
+      security: [{ cookieAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200':
+          description: Cancelled order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '409':
+          description: 'Order is not "placed" (e.g. `This order is cancelled and can no longer be cancelled.`)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
