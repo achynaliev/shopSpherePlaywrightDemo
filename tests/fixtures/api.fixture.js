@@ -19,65 +19,70 @@ function apiUserEmail(parallelIndex) {
     return `${local}+api-w${parallelIndex}@${domain}`;
 }
 
+// Registers the account if needed, signs in, and returns its session cookie.
+async function createSession(playwright, workerInfo, email) {
+    if (!process.env.PASSWORD) throw new Error('Missing environment variable: PASSWORD');
+    const user = {
+        name: 'Atai Chynaliev',
+        email,
+        password: process.env.PASSWORD,
+    };
+    const api = await playwright.request.newContext({ baseURL: baseURLOf(workerInfo) });
+    try {
+        const registered = await api.post('/api/auth/register', { data: user });
+        // 409: the account already exists from an earlier run.
+        if (!registered.ok() && registered.status() !== 409) {
+            throw new Error(`Could not register ${user.email}: ${registered.status()} ${await registered.text()}`);
+        }
+        const res = await api.post('/api/auth/login', {
+            data: { email: user.email, password: user.password },
+        });
+        if (!res.ok()) {
+            throw new Error(`Could not sign in ${user.email}: ${res.status()} ${await res.text()}`);
+        }
+        return await api.storageState();
+    } finally {
+        await api.dispose();
+    }
+}
+
+// Gives a test a client signed in with the given session, then cleans it up.
+async function provideClient(playwright, testInfo, storageState, use) {
+    const api = await playwright.request.newContext({
+        baseURL: baseURLOf(testInfo),
+        extraHTTPHeaders: headersOf(testInfo),
+        storageState,
+    });
+    await use(api);
+    await api.dispose();
+}
+
 export const test = base.extend({
     // Guest client: no session cookie. Use for public endpoints and 401 checks.
     api: async ({ playwright }, use, testInfo) => {
-        const api = await playwright.request.newContext({
-            baseURL: baseURLOf(testInfo),
-            extraHTTPHeaders: headersOf(testInfo),
-        });
-        await use(api);
-        await api.dispose();
+        await provideClient(playwright, testInfo, undefined, use);
     },
 
-    // This worker's API account: { email, password, name }. Registered once per worker.
-    apiUser: [async ({ playwright }, use, workerInfo) => {
-        if (!process.env.PASSWORD) throw new Error('Missing environment variable: PASSWORD');
-        const user = {
-            name: 'Atai Chynaliev',
-            email: apiUserEmail(workerInfo.parallelIndex),
-            password: process.env.PASSWORD,
-        };
-        const api = await playwright.request.newContext({ baseURL: baseURLOf(workerInfo) });
-        try {
-            const res = await api.post('/api/auth/register', { data: user });
-            // 409: the account already exists from an earlier run.
-            if (!res.ok() && res.status() !== 409) {
-                throw new Error(`Could not register ${user.email}: ${res.status()} ${await res.text()}`);
-            }
-        } finally {
-            await api.dispose();
-        }
-        await use(user);
+    // Sessions are created once per worker because password hashing is slow.
+    apiSession: [async ({ playwright }, use, workerInfo) => {
+        await use(await createSession(playwright, workerInfo, apiUserEmail(workerInfo.parallelIndex)));
     }, { scope: 'worker' }],
 
-    // Signs the worker account in once and keeps the session cookie (password hashing is slow).
-    apiSession: [async ({ playwright, apiUser }, use, workerInfo) => {
-        const api = await playwright.request.newContext({ baseURL: baseURLOf(workerInfo) });
-        let state;
-        try {
-            const res = await api.post('/api/auth/login', {
-                data: { email: apiUser.email, password: apiUser.password },
-            });
-            if (!res.ok()) {
-                throw new Error(`Could not sign in ${apiUser.email}: ${res.status()} ${await res.text()}`);
-            }
-            state = await api.storageState();
-        } finally {
-            await api.dispose();
-        }
-        await use(state);
+    // The real REGULAR_USER3 account, which has order history. All workers share it,
+    // so use it for reading only: don't change its cart or place orders with it.
+    otherApiSession: [async ({ playwright }, use, workerInfo) => {
+        if (!process.env.REGULAR_USER3) throw new Error('Missing environment variable: REGULAR_USER3');
+        await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER3));
     }, { scope: 'worker' }],
 
-    // Signed-in client for endpoints behind requireAuth (cart, orders, reviews, /me).
+    // Signed-in clients for endpoints behind requireAuth (cart, orders, reviews, /me).
     authApi: async ({ playwright, apiSession }, use, testInfo) => {
-        const api = await playwright.request.newContext({
-            baseURL: baseURLOf(testInfo),
-            extraHTTPHeaders: headersOf(testInfo),
-            storageState: apiSession,
-        });
-        await use(api);
-        await api.dispose();
+        await provideClient(playwright, testInfo, apiSession, use);
+    },
+
+    // Signed in as REGULAR_USER3, for checking that users can't reach each other's data.
+    otherAuthApi: async ({ playwright, otherApiSession }, use, testInfo) => {
+        await provideClient(playwright, testInfo, otherApiSession, use);
     },
 });
 

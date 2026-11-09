@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/api.fixture.js';
 
 test.describe('Products API for single product page', () => {
-    test('GET /api/products/product get a specific product @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/product get a specific product authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products/auralis-pro-wireless-noise-cancelling-headphones');
 
         expect(res.status()).toBe(200);
@@ -79,7 +79,7 @@ test.describe('Products API for single product page', () => {
     });
 
 
-    test('GET /api/products/:slug/related - should return related products @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/:slug/related - should return related products authenticated user @smoke @p0', async ({ authApi }) => {
 
         const slug = 'auralis-pro-wireless-noise-cancelling-headphones';
 
@@ -150,7 +150,7 @@ test.describe('Products API for single product page', () => {
     });
 
 
-    test('GET /api/products/product get reviews for the product @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/product get reviews for the product authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products/auralis-pro-wireless-noise-cancelling-headphones/reviews?sort=recent');
 
         expect(res.status()).toBe(200);

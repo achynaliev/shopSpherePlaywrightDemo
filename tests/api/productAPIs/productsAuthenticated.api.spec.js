@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/api.fixture.js';
 
 test.describe('Products API', () => {
-    test('GET /api/products returns a paginated product list @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products returns a paginated product list authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products', { params: { limit: 5 } });
 
         expect(res.status()).toBe(200);
@@ -25,7 +25,7 @@ test.describe('Products API', () => {
         }
     });
 
-    test('GET /api/products/categories list of categories @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/categories list of categories authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products/categories');
 
         expect(res.status()).toBe(200);
@@ -68,7 +68,7 @@ test.describe('Products API', () => {
     });
 
 
-    test('GET /api/products/categories specific category @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/categories specific category authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products?categories=Electronics');
 
         expect(res.status()).toBe(200);
@@ -124,7 +124,7 @@ test.describe('Products API', () => {
         expect(new Set(slugs).size).toBe(slugs.length);
     });
 
-    test('GET /api/products/categories featured products @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/categories featured products authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products?featured=true&limit=8');
 
         expect(res.status()).toBe(200);
@@ -164,7 +164,7 @@ test.describe('Products API', () => {
         }
     });
 
-    test('GET /api/products/categories get newest products @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/categories get newest products authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products?sort=newest&limit=8');
 
         expect(res.status()).toBe(200);
@@ -204,7 +204,7 @@ test.describe('Products API', () => {
         }
     });
 
-    test('GET /api/products/categories get by sorted ratings products @smoke @p0', async ({ authApi }) => {
+    test('GET /api/products/categories get by sorted ratings products authenticated user @smoke @p0', async ({ authApi }) => {
         const res = await authApi.get('/api/products?sort=rating&limit=8');
 
         expect(res.status()).toBe(200);
