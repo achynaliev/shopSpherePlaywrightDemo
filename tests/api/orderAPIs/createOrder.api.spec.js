@@ -5,13 +5,13 @@ import { wrongOrderDataCard, cardDataMissingOrderData, shippingDataMissingOrderD
 import { emptyCart } from '../../test-data/emptyCart.js'
 
 test.describe('Orders API', () => {
-    test.beforeEach(async ({ authApi2 }) => { await authApi2.delete('/api/cart'); });
-    test.afterEach(async ({ authApi2 }) => { await authApi2.delete('/api/cart'); });
+    test.beforeEach(async ({ authApi }) => { await authApi.delete('/api/cart'); });
+    test.afterEach(async ({ authApi }) => { await authApi.delete('/api/cart'); });
 
     test('POST /api/orders - Create order with empty cart', {
         tag: ['@api', '@p0', '@regression']
-    }, async ({ authApi2 }) => {
-        const res = await authApi2.post('/api/orders', {
+    }, async ({ authApi }) => {
+        const res = await authApi.post('/api/orders', {
             data: orderData
         });
 
@@ -25,9 +25,9 @@ test.describe('Orders API', () => {
     });
 
 
-    test('POST /api/orders happy path @smoke @p0', async ({ authApi2 }) => {
-        await authApi2.post('/api/cart', { data: addToCartData });
-        const res = await authApi2.post('/api/orders', {
+    test('POST /api/orders happy path @smoke @p0', async ({ authApi }) => {
+        await authApi.post('/api/cart', { data: addToCartData });
+        const res = await authApi.post('/api/orders', {
             data: orderData
         });
 
@@ -69,7 +69,7 @@ test.describe('Orders API', () => {
             order.subtotal + order.shipping + order.tax
         );
 
-        const resEmptyCart = await authApi2.get('/api/cart');
+        const resEmptyCart = await authApi.get('/api/cart');
 
         expect(resEmptyCart.status()).toBe(200);
         expect(resEmptyCart.headers()['content-type']).toContain('application/json');
@@ -78,9 +78,9 @@ test.describe('Orders API', () => {
         expect(bodyEmptyCart).toEqual(emptyCart);
     })
 
-    test('POST /api/orders card invalid @smoke @p0', async ({ authApi2 }) => {
-        await authApi2.post('/api/cart', { data: addToCartData });
-        const res = await authApi2.post('/api/orders', {
+    test('POST /api/orders card invalid @smoke @p0', async ({ authApi }) => {
+        await authApi.post('/api/cart', { data: addToCartData });
+        const res = await authApi.post('/api/orders', {
             data: wrongOrderDataCard
         });
 
@@ -91,16 +91,16 @@ test.describe('Orders API', () => {
             error: 'payment.cardNumber: Card number is invalid'
         });
 
-        const cart = await authApi2.get('/api/cart');
+        const cart = await authApi.get('/api/cart');
         expect(cart.status()).toBe(200);
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
     })
 
-    test('POST /api/orders missing card data @smoke @p0', async ({ authApi2 }) => {
-        await authApi2.post('/api/cart', { data: addToCartData });
-        const res = await authApi2.post('/api/orders', {
+    test('POST /api/orders missing card data @smoke @p0', async ({ authApi }) => {
+        await authApi.post('/api/cart', { data: addToCartData });
+        const res = await authApi.post('/api/orders', {
             data: cardDataMissingOrderData
         });
 
@@ -111,16 +111,16 @@ test.describe('Orders API', () => {
             error: 'payment.cvc: Enter a valid security code'
         });
 
-        const cart = await authApi2.get('/api/cart');
+        const cart = await authApi.get('/api/cart');
         expect(cart.status()).toBe(200);
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
     })
 
-    test('POST /api/orders missing shipping data @smoke @p0', async ({ authApi2 }) => {
-        await authApi2.post('/api/cart', { data: addToCartData });
-        const res = await authApi2.post('/api/orders', {
+    test('POST /api/orders missing shipping data @smoke @p0', async ({ authApi }) => {
+        await authApi.post('/api/cart', { data: addToCartData });
+        const res = await authApi.post('/api/orders', {
             data: shippingDataMissingOrderData
         });
 
@@ -131,16 +131,16 @@ test.describe('Orders API', () => {
             error: 'shipping.postalCode: Enter a valid postal code'
         });
 
-        const cart = await authApi2.get('/api/cart');
+        const cart = await authApi.get('/api/cart');
         expect(cart.status()).toBe(200);
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
     })
 
-    test('POST /api/orders card declined @smoke @p0', async ({ authApi2 }) => {
-        await authApi2.post('/api/cart', { data: addToCartData });
-        const res = await authApi2.post('/api/orders', {
+    test('POST /api/orders card declined @smoke @p0', async ({ authApi }) => {
+        await authApi.post('/api/cart', { data: addToCartData });
+        const res = await authApi.post('/api/orders', {
             data: declinedOrderDataCard
         });
 
@@ -151,7 +151,7 @@ test.describe('Orders API', () => {
             error: 'Your card was declined. Try a different card.'
         });
 
-        const cart = await authApi2.get('/api/cart');
+        const cart = await authApi.get('/api/cart');
         expect(cart.status()).toBe(200);
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();

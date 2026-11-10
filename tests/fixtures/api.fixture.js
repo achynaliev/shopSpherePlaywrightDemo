@@ -13,9 +13,9 @@ const headersOf = (workerInfo) => workerInfo.project.use.extraHTTPHeaders;
 
 // Each worker gets its own API account (name+api-w0@x.com, ...), so parallel specs that
 // change a cart or place orders never step on each other or on the UI specs' accounts.
-function apiUserEmail(parallelIndex) {
-    if (!process.env.REGULAR_USER) throw new Error('Missing environment variable: REGULAR_USER');
-    const [local, domain] = process.env.REGULAR_USER.split('@');
+function apiUserEmail(parallelIndex, key = 'REGULAR_USER') {
+    if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
+    const [local, domain] = process.env[key].split('@');
     return `${local}+api-w${parallelIndex}@${domain}`;
 }
 
@@ -58,39 +58,31 @@ async function provideClient(playwright, testInfo, storageState, use) {
 }
 
 export const test = base.extend({
-    // Guest client: no session cookie. Use for public endpoints and 401 checks.
     api: async ({ playwright }, use, testInfo) => {
         await provideClient(playwright, testInfo, undefined, use);
     },
 
-    // Sessions are created once per worker because password hashing is slow.
     apiSession: [async ({ playwright }, use, workerInfo) => {
         await use(await createSession(playwright, workerInfo, apiUserEmail(workerInfo.parallelIndex)));
     }, { scope: 'worker' }],
 
-    // The real REGULAR_USER3 account, which has order history. All workers share it,
-    // so use it for reading only: don't change its cart or place orders with it.
     otherApiSession: [async ({ playwright }, use, workerInfo) => {
         if (!process.env.REGULAR_USER3) throw new Error('Missing environment variable: REGULAR_USER3');
         await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER3));
     }, { scope: 'worker' }],
 
     otherApiSession2: [async ({ playwright }, use, workerInfo) => {
-        if (!process.env.REGULAR_USER4) throw new Error('Missing environment variable: REGULAR_USER4');
-        await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER4));
+        await use(await createSession(playwright, workerInfo, apiUserEmail(workerInfo.parallelIndex, 'REGULAR_USER4')));
     }, { scope: 'worker' }],
 
     otherApiSession3: [async ({ playwright }, use, workerInfo) => {
-        if (!process.env.REGULAR_USER6) throw new Error('Missing environment variable: REGULAR_USER6');
-        await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER6));
+        await use(await createSession(playwright, workerInfo, apiUserEmail(workerInfo.parallelIndex, 'REGULAR_USER6')));
     }, { scope: 'worker' }],
 
-    // Signed-in clients for endpoints behind requireAuth (cart, orders, reviews, /me).
     authApi: async ({ playwright, apiSession }, use, testInfo) => {
         await provideClient(playwright, testInfo, apiSession, use);
     },
 
-    // Signed in as REGULAR_USER3, for checking that users can't reach each other's data.
     authApi2: async ({ playwright, otherApiSession }, use, testInfo) => {
         await provideClient(playwright, testInfo, otherApiSession, use);
     },

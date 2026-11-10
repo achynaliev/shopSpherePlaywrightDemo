@@ -11,11 +11,15 @@ test.describe('Orders API', () => {
         expect(body).toHaveProperty('orders');
         expect(body.orders).toBeInstanceOf(Array);
 
+        // Orders don't expose userId; check fields the API actually returns
         for (const order of body.orders) {
             expect(order).toEqual(
                 expect.objectContaining({
                     id: expect.any(Number),
-                    userId: expect.any(Number)
+                    orderNumber: expect.stringMatching(/^\d{3}-\d{7}-\d{7}$/),
+                    status: expect.any(String),
+                    total: expect.any(Number),
+                    items: expect.any(Array)
                 })
             );
         }
