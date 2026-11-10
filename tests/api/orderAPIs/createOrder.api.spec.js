@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/api.fixture.js';
 import { orderData } from '../../test-data/correctOrderData.js';
 import { addToCartData } from '../../test-data/cartData'
-import { wrongOrderDataCard, cardDataMissingOrderData, shippingDataMissingOrderData } from '../../test-data/wrongOrderData.js'
+import { wrongOrderDataCard, cardDataMissingOrderData, shippingDataMissingOrderData, declinedOrderDataCard } from '../../test-data/wrongOrderData.js'
 
 test.describe('Orders API', () => {
     test('POST /api/orders - Create order with empty cart', {
@@ -86,7 +86,7 @@ test.describe('Orders API', () => {
         });
     })
 
-    test('POST /api/orders card declined @smoke @p0', async ({ authApi2 }) => {
+    test('POST /api/orders card invalid @smoke @p0', async ({ authApi2 }) => {
         // Start from an empty cart so re-runs don't stack quantities
         await authApi2.delete('/api/cart');
 
@@ -150,6 +150,31 @@ test.describe('Orders API', () => {
         const body = await res.json();
         expect(body).toEqual({
             error: 'shipping.postalCode: Enter a valid postal code'
+        });
+
+        const cart = await authApi2.get('/api/cart');
+        expect(cart.status()).toBe(200);
+        expect(cart.headers()['content-type']).toContain('application/json');
+        const cartBody = await cart.json();
+        expect(cartBody.items).not.toHaveLength(0);
+
+        await authApi2.delete('/api/cart');
+    })
+
+    test('POST /api/orders card declined @smoke @p0', async ({ authApi2 }) => {
+        // Start from an empty cart so re-runs don't stack quantities
+        await authApi2.delete('/api/cart');
+
+        await authApi2.post('/api/cart', { data: addToCartData });
+        const res = await authApi2.post('/api/orders', {
+            data: declinedOrderDataCard
+        });
+
+        expect(res.status()).toBe(402);
+        expect(res.headers()['content-type']).toContain('application/json');
+        const body = await res.json();
+        expect(body).toEqual({
+            error: 'Your card was declined. Try a different card.'
         });
 
         const cart = await authApi2.get('/api/cart');
