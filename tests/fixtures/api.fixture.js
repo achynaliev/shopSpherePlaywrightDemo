@@ -75,14 +75,23 @@ export const test = base.extend({
         await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER3));
     }, { scope: 'worker' }],
 
+    otherApiSession2: [async ({ playwright }, use, workerInfo) => {
+        if (!process.env.REGULAR_USER4) throw new Error('Missing environment variable: REGULAR_USER4');
+        await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER4));
+    }, { scope: 'worker' }],
+
     // Signed-in clients for endpoints behind requireAuth (cart, orders, reviews, /me).
     authApi: async ({ playwright, apiSession }, use, testInfo) => {
         await provideClient(playwright, testInfo, apiSession, use);
     },
 
     // Signed in as REGULAR_USER3, for checking that users can't reach each other's data.
-    otherAuthApi: async ({ playwright, otherApiSession }, use, testInfo) => {
+    AuthApi2: async ({ playwright, otherApiSession }, use, testInfo) => {
         await provideClient(playwright, testInfo, otherApiSession, use);
+    },
+
+    AuthApi3: async ({ playwright, otherApiSession2 }, use, testInfo) => {
+        await provideClient(playwright, testInfo, otherApiSession2, use);
     },
 });
 
