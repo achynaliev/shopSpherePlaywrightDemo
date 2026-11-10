@@ -1,26 +1,21 @@
 import { test, expect } from '../../fixtures/api.fixture.js';
 import { addToCartData, expectedCartProduct, addToCartDataInvalid, addToCartDataOutOfStock } from '../../test-data/cartData.js';
+import { emptyCart } from '../../test-data/emptyCart.js'
 
 test.describe('Cart API', () => {
+    test.beforeEach(async ({ authApi3 }) => { await authApi3.delete('/api/cart'); });
+    test.afterEach(async ({ authApi3 }) => { await authApi3.delete('/api/cart'); });
+
     test('GET /api/cart - get empty cart', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ authApi3 }) => {
-        await authApi3.delete('/api/cart');
         const res = await authApi3.get('/api/cart');
 
         expect(res.status()).toBe(200);
         expect(res.headers()['content-type']).toContain('application/json');
 
         const body = await res.json();
-        expect(body).toEqual({
-            items: [],
-            count: 0,
-            subtotal: 0,
-            shipping: 0,
-            tax: 0,
-            total: 0,
-            freeShippingThreshold: 3500
-        });
+        expect(body).toEqual(emptyCart);
     });
 
     test('GET /api/cart - get empty cart not authorized', {
@@ -32,23 +27,12 @@ test.describe('Cart API', () => {
         expect(res.headers()['content-type']).toContain('application/json');
 
         const body = await res.json();
-        expect(body).toEqual({
-            items: [],
-            count: 0,
-            subtotal: 0,
-            shipping: 0,
-            tax: 0,
-            total: 0,
-            freeShippingThreshold: 3500
-        });
+        expect(body).toEqual(emptyCart);
     });
 
     test('POST /api/cart - add item to cart', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ authApi3 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi3.delete('/api/cart');
-
         const res = await authApi3.post('/api/cart', { data: addToCartData });
 
         expect(res.status()).toBe(201);
@@ -64,9 +48,6 @@ test.describe('Cart API', () => {
         ]);
         expect(body.subtotal).toBe(expectedCartProduct.price * addToCartData.quantity);
         expect(body.total).toBe(body.subtotal + body.shipping + body.tax);
-
-        // Clean up so the "empty cart" test stays independent
-        await authApi3.delete('/api/cart');
     });
 
     test('POST /api/cart - add item with invalid body returns 400', {
@@ -120,9 +101,6 @@ test.describe('Cart API', () => {
     test('POST /api/cart - delete item', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ authApi3 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi3.delete('/api/cart');
-
         const res = await authApi3.post('/api/cart', { data: addToCartData });
 
         expect(res.status()).toBe(201);
@@ -148,15 +126,7 @@ test.describe('Cart API', () => {
         expect(results.headers()['content-type']).toContain('application/json');
 
         const bodyEmpty = await results.json();
-        expect(bodyEmpty).toEqual({
-            items: [],
-            count: 0,
-            subtotal: 0,
-            shipping: 0,
-            tax: 0,
-            total: 0,
-            freeShippingThreshold: 3500
-        });
+        expect(bodyEmpty).toEqual(emptyCart);
     });
 
     test('DELETE /api/cart - try to delete cart not authorized', {

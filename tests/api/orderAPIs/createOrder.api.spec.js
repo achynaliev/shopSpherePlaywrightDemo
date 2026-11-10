@@ -2,12 +2,15 @@ import { test, expect } from '../../fixtures/api.fixture.js';
 import { orderData } from '../../test-data/correctOrderData.js';
 import { addToCartData } from '../../test-data/cartData'
 import { wrongOrderDataCard, cardDataMissingOrderData, shippingDataMissingOrderData, declinedOrderDataCard } from '../../test-data/wrongOrderData.js'
+import { emptyCart } from '../../test-data/emptyCart.js'
 
 test.describe('Orders API', () => {
+    test.beforeEach(async ({ authApi2 }) => { await authApi2.delete('/api/cart'); });
+    test.afterEach(async ({ authApi2 }) => { await authApi2.delete('/api/cart'); });
+
     test('POST /api/orders - Create order with empty cart', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ authApi2 }) => {
-        await authApi2.delete('/api/cart');
         const res = await authApi2.post('/api/orders', {
             data: orderData
         });
@@ -23,9 +26,6 @@ test.describe('Orders API', () => {
 
 
     test('POST /api/orders happy path @smoke @p0', async ({ authApi2 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi2.delete('/api/cart');
-
         await authApi2.post('/api/cart', { data: addToCartData });
         const res = await authApi2.post('/api/orders', {
             data: orderData
@@ -75,21 +75,10 @@ test.describe('Orders API', () => {
         expect(resEmptyCart.headers()['content-type']).toContain('application/json');
 
         const bodyEmptyCart = await resEmptyCart.json();
-        expect(bodyEmptyCart).toEqual({
-            items: [],
-            count: 0,
-            subtotal: 0,
-            shipping: 0,
-            tax: 0,
-            total: 0,
-            freeShippingThreshold: 3500
-        });
+        expect(bodyEmptyCart).toEqual(emptyCart);
     })
 
     test('POST /api/orders card invalid @smoke @p0', async ({ authApi2 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi2.delete('/api/cart');
-
         await authApi2.post('/api/cart', { data: addToCartData });
         const res = await authApi2.post('/api/orders', {
             data: wrongOrderDataCard
@@ -107,14 +96,9 @@ test.describe('Orders API', () => {
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
-
-        await authApi2.delete('/api/cart');
     })
 
     test('POST /api/orders missing card data @smoke @p0', async ({ authApi2 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi2.delete('/api/cart');
-
         await authApi2.post('/api/cart', { data: addToCartData });
         const res = await authApi2.post('/api/orders', {
             data: cardDataMissingOrderData
@@ -132,14 +116,9 @@ test.describe('Orders API', () => {
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
-
-        await authApi2.delete('/api/cart');
     })
 
     test('POST /api/orders missing shipping data @smoke @p0', async ({ authApi2 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi2.delete('/api/cart');
-
         await authApi2.post('/api/cart', { data: addToCartData });
         const res = await authApi2.post('/api/orders', {
             data: shippingDataMissingOrderData
@@ -157,14 +136,9 @@ test.describe('Orders API', () => {
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
-
-        await authApi2.delete('/api/cart');
     })
 
     test('POST /api/orders card declined @smoke @p0', async ({ authApi2 }) => {
-        // Start from an empty cart so re-runs don't stack quantities
-        await authApi2.delete('/api/cart');
-
         await authApi2.post('/api/cart', { data: addToCartData });
         const res = await authApi2.post('/api/orders', {
             data: declinedOrderDataCard
@@ -182,7 +156,5 @@ test.describe('Orders API', () => {
         expect(cart.headers()['content-type']).toContain('application/json');
         const cartBody = await cart.json();
         expect(cartBody.items).not.toHaveLength(0);
-
-        await authApi2.delete('/api/cart');
     })
 });
