@@ -157,4 +157,16 @@ test.describe('Cart API', () => {
             freeShippingThreshold: 3500
         });
     });
+
+    test('DELETE /api/cart - try to delete cart not authorized', {
+        tag: ['@api', '@p0', '@regression']
+    }, async ({ api }) => {
+        const res = await api.delete('/api/cart');
+
+        expect(res.status()).toBe(401);
+        expect(res.headers()['content-type']).toContain('application/json');
+
+        const body = await res.json();
+        expect(await res.json()).toEqual({ error: 'Please sign in to continue.' });
+    });
 });

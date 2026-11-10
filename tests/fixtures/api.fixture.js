@@ -80,6 +80,11 @@ export const test = base.extend({
         await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER4));
     }, { scope: 'worker' }],
 
+    otherApiSession3: [async ({ playwright }, use, workerInfo) => {
+        if (!process.env.REGULAR_USER6) throw new Error('Missing environment variable: REGULAR_USER6');
+        await use(await createSession(playwright, workerInfo, process.env.REGULAR_USER6));
+    }, { scope: 'worker' }],
+
     // Signed-in clients for endpoints behind requireAuth (cart, orders, reviews, /me).
     authApi: async ({ playwright, apiSession }, use, testInfo) => {
         await provideClient(playwright, testInfo, apiSession, use);
@@ -92,6 +97,10 @@ export const test = base.extend({
 
     authApi3: async ({ playwright, otherApiSession2 }, use, testInfo) => {
         await provideClient(playwright, testInfo, otherApiSession2, use);
+    },
+
+    authApi4: async ({ playwright, otherApiSession3 }, use, testInfo) => {
+        await provideClient(playwright, testInfo, otherApiSession3, use);
     },
 });
 
