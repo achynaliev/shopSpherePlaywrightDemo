@@ -5,6 +5,7 @@ test.describe('Cart API', () => {
     test('GET /api/cart - get empty cart', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ authApi3 }) => {
+        await authApi3.delete('/api/cart');
         const res = await authApi3.get('/api/cart');
 
         expect(res.status()).toBe(200);
