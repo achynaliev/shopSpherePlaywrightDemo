@@ -2,11 +2,10 @@ import { test, expect } from '../../fixtures/api.fixture.js';
 import { orderData } from '../../test-data/correctOrderData.js';
 
 test.describe('Orders API', () => {
-
     test('POST /api/orders - Create order successfully', {
         tag: ['@api', '@p0', '@regression']
-    }, async ({ AuthApi2 }) => {
-        const res = await AuthApi2.post('/api/orders', {
+    }, async ({ authApi2 }) => {
+        const res = await authApi2.post('/api/orders', {
             data: orderData
         });
 

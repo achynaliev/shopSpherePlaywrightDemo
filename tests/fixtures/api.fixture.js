@@ -86,11 +86,11 @@ export const test = base.extend({
     },
 
     // Signed in as REGULAR_USER3, for checking that users can't reach each other's data.
-    AuthApi2: async ({ playwright, otherApiSession }, use, testInfo) => {
+    authApi2: async ({ playwright, otherApiSession }, use, testInfo) => {
         await provideClient(playwright, testInfo, otherApiSession, use);
     },
 
-    AuthApi3: async ({ playwright, otherApiSession2 }, use, testInfo) => {
+    authApi3: async ({ playwright, otherApiSession2 }, use, testInfo) => {
         await provideClient(playwright, testInfo, otherApiSession2, use);
     },
 });
