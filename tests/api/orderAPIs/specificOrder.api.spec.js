@@ -1,9 +1,24 @@
 import { test, expect } from '../../fixtures/api.fixture.js';
 import { addToCartData } from '../../test-data/cartData.js';
 import { orderData } from '../../test-data/correctOrderData.js'
+import { cancelPlacedOrders } from '../../fixtures/orderCleanup.js'
 let orderId;
 
 test.describe('Orders API', () => {
+    // The tests below share orderId, so clean up once at the end, not after each test.
+    // afterAll can't use test fixtures like authApi, so build a client from this worker's session.
+    test.afterAll(async ({ playwright, apiSession }, workerInfo) => {
+        const client = await playwright.request.newContext({
+            baseURL: workerInfo.project.use.baseURL,
+            storageState: apiSession,
+        });
+        try {
+            await cancelPlacedOrders(client); // restocks if the cancel test failed or didn't run
+        } finally {
+            await client.dispose();
+        }
+    });
+
     test('POST /api/orders create order and get that order', async ({ authApi }) => {
         await authApi.post('/api/cart', { data: addToCartData });
         const res = await authApi.post('/api/orders', {

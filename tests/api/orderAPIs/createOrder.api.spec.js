@@ -3,10 +3,14 @@ import { orderData } from '../../test-data/correctOrderData.js';
 import { addToCartData } from '../../test-data/cartData'
 import { wrongOrderDataCard, cardDataMissingOrderData, shippingDataMissingOrderData, declinedOrderDataCard } from '../../test-data/wrongOrderData.js'
 import { emptyCart } from '../../test-data/emptyCart.js'
+import { cancelPlacedOrders } from '../../fixtures/orderCleanup.js'
 
 test.describe('Orders API', () => {
     test.beforeEach(async ({ authApi }) => { await authApi.delete('/api/cart'); });
-    test.afterEach(async ({ authApi }) => { await authApi.delete('/api/cart'); });
+    test.afterEach(async ({ authApi }) => {
+        await authApi.delete('/api/cart');
+        await cancelPlacedOrders(authApi); // restock what the happy path ordered
+    });
 
     test('POST /api/orders - Create order with empty cart', {
         tag: ['@api', '@p0', '@regression']

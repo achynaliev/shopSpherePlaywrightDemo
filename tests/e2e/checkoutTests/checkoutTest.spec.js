@@ -1,6 +1,7 @@
 import { POManager } from '../../page-objects/POManager.js';
 import { authenticatedTest } from '../../fixtures/auth.fixture.js';
 import { expect } from '@playwright/test';
+import { cancelPlacedOrders } from '../../fixtures/orderCleanup.js';
 
 authenticatedTest.describe('Checkout tests', () => {
 
@@ -8,6 +9,8 @@ authenticatedTest.describe('Checkout tests', () => {
         const poManager = new POManager(authenticatedPage);
         const cartAndCheckout = poManager.getCartAndCheckoutPages();
         await cartAndCheckout.clearCart();
+        // page.request shares the page's session cookie; restocks what the test ordered
+        await cancelPlacedOrders(authenticatedPage.request);
     });
 
     authenticatedTest('Defaults | Full name and name-on-card prefilled with user name; country "United States"; heading "Checkout (N items)"', { tag: ['@p1', '@regression'] },

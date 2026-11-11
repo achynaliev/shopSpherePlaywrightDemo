@@ -1,6 +1,12 @@
 import { POManager } from '../../page-objects/POManager.js';
 import { authenticatedTest } from '../../fixtures/auth.fixture.js';
 import { expect } from '@playwright/test';
+import { cancelPlacedOrders } from '../../fixtures/orderCleanup.js';
+
+// page.request shares the page's session cookie; restocks what the test ordered
+authenticatedTest.afterEach(async ({ authenticatedPage }) => {
+    await cancelPlacedOrders(authenticatedPage.request);
+});
 
 authenticatedTest('complete a full order e2e', { tag: ['@p0', '@smoke', '@regression'] },
     async ({ authenticatedPage }) => {
