@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { submitAndWaitForAuth } from '../../page-objects/Authentication.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -28,7 +29,7 @@ test.describe('Session tests for logged in user and not logged in user', () => {
             await page.locator('a.nav-item[href*="/login"]').click();
             await page.locator('input[type="email"]').fill(process.env.REGULAR_USER2);
             await page.locator('input[type="password"]').fill(process.env.PASSWORD);
-            await page.getByRole('button', { name: 'Sign in' }).click();
+            await submitAndWaitForAuth(page, page.getByRole('button', { name: 'Sign in' }));
             await expect(page.getByRole('button', { name: /Hello, atai/ })).toBeVisible();
             await page.goto('/login');
             await expect(page).toHaveURL('/');
@@ -42,7 +43,7 @@ test.describe('Session tests for logged in user and not logged in user', () => {
             await page.locator('a.nav-item[href*="/login"]').click();
             await page.locator('input[type="email"]').fill(process.env.REGULAR_USER2);
             await page.locator('input[type="password"]').fill(process.env.PASSWORD);
-            await page.getByRole('button', { name: 'Sign in' }).click();
+            await submitAndWaitForAuth(page, page.getByRole('button', { name: 'Sign in' }));
             await expect(page.getByRole('button', { name: /Hello, atai/ })).toBeVisible();
             await page.reload();
             await expect(page.getByRole('button', { name: /Hello, atai/ })).toBeVisible();
@@ -74,7 +75,7 @@ test.describe('Session tests for logged in user and not logged in user', () => {
             await page.locator('a.nav-item[href*="/login"]').click();
             await page.locator('input[type="email"]').fill(process.env.REGULAR_USER2);
             await page.locator('input[type="password"]').fill(process.env.PASSWORD);
-            await page.getByRole('button', { name: 'Sign in' }).click();
+            await submitAndWaitForAuth(page, page.getByRole('button', { name: 'Sign in' }));
             await expect(page.getByRole('button', { name: /Hello, atai/ })).toBeVisible();
             await page.goto('/account')
 

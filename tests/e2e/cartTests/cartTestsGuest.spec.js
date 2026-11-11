@@ -99,12 +99,12 @@ test.describe('Product cart tests as a guest', () => {
             // Log in
             await authenticationPages.goToLoginPage();
             await authenticationPages.login(workerUsers.REGULAR_USER3, process.env.PASSWORD);
+            // The count is already 1 before the merge (it's the guest item), so it can't tell us the
+            // merge finished. Poll until the app has moved the guest cart into the account and cleared it.
+            await expect.poll(() => page.evaluate(() =>
+                JSON.parse(localStorage.getItem('ss_guest_cart') || '[]').length
+            ), { message: 'guest cart should be cleared after it merges into the account' }).toBe(0);
             await navBar.verifyCartCount(1);
-            const guestCartAfterLogin = await page.evaluate(() => {
-                return JSON.parse(localStorage.getItem('ss_guest_cart') || '[]');
-            });
-
-            expect(guestCartAfterLogin).toHaveLength(0);
             await cartAndCheckout.clearCart();
         });
 });

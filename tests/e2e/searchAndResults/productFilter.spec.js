@@ -100,11 +100,19 @@ authenticatedTest.describe('Product Filter tests', () => {
             const productsListAndFilter = poManager.getProductsAndFilter();
             await authenticatedPage.goto('/search');
             await expect(productsListAndFilter.dealsOnlyCheckbox).not.toBeChecked();
+
+            // Wait for the filtered results, not just any card: the unfiltered list is still on
+            // screen right after the click, so counting then is a race (12 old cards vs 8 deals).
+            const dealsResponse = authenticatedPage.waitForResponse(
+                (res) => res.url().includes('/api/products') && res.url().includes('featured=true')
+            );
             await productsListAndFilter.dealsOnlyCheckbox.click();
             await expect(productsListAndFilter.dealsOnlyCheckbox).toBeChecked();
-            await expect(productsListAndFilter.productCard.first()).toBeVisible();
+            const { products: deals } = await (await dealsResponse).json();
+            expect(deals.length).toBeGreaterThan(0);
 
             const productCards = productsListAndFilter.productCard;
+            await expect(productCards).toHaveCount(deals.length); // retries until the deals list is rendered
 
             // Every product must have a discount badge, current price and list price.
             await expect(productCards.locator('.price-discount')).toHaveCount(

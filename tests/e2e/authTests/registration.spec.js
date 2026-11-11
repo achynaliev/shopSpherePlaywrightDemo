@@ -2,6 +2,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
+import { submitAndWaitForAuth } from '../../page-objects/Authentication.js';
 import { test, expect } from '@playwright/test';
 import dotenv from 'dotenv';
 
@@ -51,7 +52,7 @@ test.describe('Registration Tests', () => {
             await page.locator('input[type="email"]').fill(process.env.REGISTRATION_EMAIL);
             await page.getByPlaceholder('At least 8 characters').fill(process.env.PASSWORD);
             await page.getByLabel('Re-enter password').fill(process.env.PASSWORD);
-            await page.getByRole('button', { name: 'Create your account' }).click();
+            await submitAndWaitForAuth(page, page.getByRole('button', { name: 'Create your account' }), '/api/auth/register');
             await expect(page.getByRole('button', { name: /Hello, John/ })).toBeVisible();
         });
 
@@ -63,7 +64,7 @@ test.describe('Registration Tests', () => {
         await page.locator('input[type="email"]').fill(process.env.REGISTRATION_EMAIL);
         await page.getByPlaceholder('At least 8 characters').fill(process.env.PASSWORD);
         await page.getByLabel('Re-enter password').fill(process.env.PASSWORD);
-        await page.getByRole('button', { name: 'Create your account' }).click();
+        await submitAndWaitForAuth(page, page.getByRole('button', { name: 'Create your account' }), '/api/auth/register');
         await expect(page.locator('.alert')).toHaveText('An account with this email already exists.');
     });
 
