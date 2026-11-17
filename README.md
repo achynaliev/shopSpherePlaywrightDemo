@@ -43,6 +43,8 @@ tests/                          Playwright package (its own package.json)
     authTests/  cartTests/  checkoutTests/  headerAndNavTests/  ordersTest/  products/  searchAndResults/
   api/                            API specs + openapi.yaml
     authAPIs/  cartAPIs/  orderAPIs/  productAPIs/  health.api.spec.js
+  load/                           k6 load tests (see "Load tests (k6)")
+    config.js  lib/  scenarios/
 TEST_PLAN.md                    test plan: scope, environments, data strategy, test cases
 .github/workflows/
   e2e-azure-playwright.yml      CI pipeline
@@ -132,6 +134,37 @@ Run these from `tests/`:
 **Notes:**
 - **Run Playwright from `tests/`, not the repo root.** Running `npx playwright` from the root picks up a second copy of Playwright and fails with `test.describe() ... not expected here`.
 - **Local runs use the app's normal database** (`server/data/shop.db`, the same one `npm run dev` uses), so data stays between runs.
+
+## Load tests (k6)
+
+Load tests live in `tests/load/` and run with [k6](https://k6.io), a separate binary (not an npm package). Install it with `brew install k6` (macOS) or see the k6 install docs.
+
+```
+tests/load/
+  config.js          BASE_URL, load profiles (smoke/load/stress/spike), shared thresholds
+  lib/auth.js        register/login helpers (k6 keeps one cookie jar per VU)
+  scenarios/
+    smoke.js         1 VU, 30s: health + product list. Run this first.
+    browse.js        Guest browsing: home -> search/filter -> product page (default: load)
+    cart.js          Signed-in cart flow: add -> view -> update -> clear (default: load)
+```
+
+Start the app (`npm run dev` at the root), then from `tests/`:
+
+| Command | What it runs |
+| --- | --- |
+| `npm run load:smoke` | Smoke test |
+| `npm run load:browse` | Browse scenario, `load` profile |
+| `npm run load:cart` | Cart scenario, `load` profile |
+| `k6 run -e PROFILE=stress load/scenarios/browse.js` | Any scenario with another profile (`smoke`, `load`, `stress`, `spike`) |
+| `k6 run -e BASE_URL=https://staging.example.com load/scenarios/smoke.js` | Point at another environment (default `http://localhost:4000`) |
+| `k6 run --out json=load-results.json load/scenarios/browse.js` | Save raw results |
+
+**Notes:**
+- **Thresholds are pass/fail criteria.** Defaults (`config.js`): under 1% failed requests, p95 < 500 ms, p99 < 1 s, 99% of checks passing. A breach makes k6 exit non-zero, so the scripts can gate CI.
+- **`cart.js` registers one user per VU per run** (`k6-<runId>-vu<N>@loadtest.dev`) so VUs don't share a cart. These accounts stay in the database; `npm run seed` wipes them locally.
+- **Auth is rate-limited** (`AUTH_RATE_LIMIT`: 1000/15 min in dev, 20 in production). Against a production build, raise it or keep the VU count low for `cart.js`.
+- **To add a scenario,** copy one in `scenarios/`, call `buildOptions('<default profile>', { thresholds })`, and tag each request with a `name` so URLs with IDs group together in the results.
 
 ## CI: GitHub Actions + Azure Playwright Workspaces
 
@@ -234,7 +267,7 @@ server/            Express API
 client/            React app (Vite, React Router)
   src/pages/         Home, Search, Product, Cart, Checkout, Orders, Account, Auth
   src/context/       auth, cart (guest + account), toasts
-tests/             Playwright UI + API test framework (see the top of this README)
+tests/             Playwright UI + API test framework, plus k6 load tests in tests/load/
 ```
 
 SQLite suits a single-instance deployment. To run several instances, move to Postgres. The SQL is plain and lives in the route files.
