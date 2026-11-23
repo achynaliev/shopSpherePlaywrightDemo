@@ -20,8 +20,8 @@ test.describe('Cart API', () => {
 
     test('GET /api/cart - get empty cart not authorized', {
         tag: ['@api', '@p0', '@regression']
-    }, async ({ authApi }) => {
-        const res = await authApi.get('/api/cart');
+    }, async ({ api }) => {
+        const res = await api.get('/api/cart');
 
         expect(res.status()).toBe(200);
         expect(res.headers()['content-type']).toContain('application/json');

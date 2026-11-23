@@ -68,8 +68,8 @@ test.describe('Products API', () => {
     });
 
 
-    test('GET /api/products/categories specific category @smoke @p0', async ({ api }) => {
-        const res = await api.get('/api/products?categories=Electronics');
+    test('GET /api/products?category= filters by category @smoke @p0', async ({ api }) => {
+        const res = await api.get('/api/products', { params: { category: 'Electronics' } });
 
         expect(res.status()).toBe(200);
         expect(res.headers()['content-type']).toContain('application/json');
@@ -82,10 +82,14 @@ test.describe('Products API', () => {
         // Pagination
         expect(body.page).toBe(1);
         expect(body.limit).toBe(12);
-        expect(body.total).toBe(30);
-        expect(body.totalPages).toBe(3);
+        // Electronics has 7 seeded products (see the categories test), so they fit on one page
+        expect(body.total).toBe(7);
+        expect(body.totalPages).toBe(1);
 
-        expect(body.products).toHaveLength(12);
+        expect(body.products).toHaveLength(7);
+
+        // The filter was applied: every product is in the requested category
+        expect(body.products.map(p => p.category)).toEqual(Array(7).fill('Electronics'));
 
         // Product data validation
         for (const product of body.products) {

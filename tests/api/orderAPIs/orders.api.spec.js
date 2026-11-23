@@ -1,4 +1,7 @@
 import { test, expect } from '../../fixtures/api.fixture.js';
+import { addToCartData } from '../../test-data/cartData.js';
+import { orderData } from '../../test-data/correctOrderData.js';
+import { cancelPlacedOrders } from '../../fixtures/orderCleanup.js';
 
 test.describe('Orders API', () => {
     test('GET /api/orders get orders for a user @smoke @p0', async ({ authApi }) => {
@@ -25,16 +28,33 @@ test.describe('Orders API', () => {
         }
     })
 
-    test('GET /api/orders specific order for a different user @smoke @p0', async ({ authApi }) => {
-        const res = await authApi.get('/api/orders/28');
+    test('GET /api/orders specific order for a different user @smoke @p0', async ({ authApi, authApi3 }) => {
+        // User A (authApi) places a real order, so the id is known to exist
+        await authApi.delete('/api/cart');
+        const add = await authApi.post('/api/cart', { data: addToCartData });
+        expect(add.status(), `setup: add to cart failed: ${await add.text()}`).toBe(201);
+        const created = await authApi.post('/api/orders', { data: orderData });
+        expect(created.status(), `setup: create order failed: ${await created.text()}`).toBe(201);
+        const { order } = await created.json();
 
-        expect(res.status()).toBe(404);
-        expect(res.headers()['content-type']).toContain('application/json');
+        try {
+            // Sanity check: the owner can read it
+            const own = await authApi.get(`/api/orders/${order.id}`);
+            expect(own.status()).toBe(200);
 
-        const body = await res.json();
-        expect(body).toEqual({
-            error: 'Order not found.'
-        });
+            // User B (authApi3) must not see it; 404 rather than 403 so ids aren't leaked
+            const res = await authApi3.get(`/api/orders/${order.id}`);
+
+            expect(res.status()).toBe(404);
+            expect(res.headers()['content-type']).toContain('application/json');
+
+            const body = await res.json();
+            expect(body).toEqual({
+                error: 'Order not found.'
+            });
+        } finally {
+            await cancelPlacedOrders(authApi); // restock what this test ordered
+        }
     })
 
     test('GET /api/orders get orders for an unauthorized request @smoke @p0', async ({ api }) => {

@@ -1,8 +1,7 @@
 import { test, expect } from '../../fixtures/api.fixture';
-import dotenv from 'dotenv';
 
-test.describe('Login and Logout API tests', () => {
-    test('POST /api/auth/me happy path to get profile info', {
+test.describe('Current user (me) API tests', () => {
+    test('GET /api/auth/me happy path to get profile info', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ api }) => {
         const userData = {
@@ -23,27 +22,33 @@ test.describe('Login and Logout API tests', () => {
         });
         expect(body.user).not.toHaveProperty('password');
 
-        const me = await api.get('/api/auth/me')
+        const me = await api.get('/api/auth/me');
         expect(me.status()).toBe(200);
         expect(me.headers()['content-type']).toContain('application/json');
-        const bodyMe = await res.json();
+        const bodyMe = await me.json();
+        // Same account the login returned
         expect(bodyMe.user).toEqual({
-            id: expect.any(Number),
+            id: body.user.id,
             name: 'Atai Chynaliev',
-            email: 'atai@test.com',
+            email: process.env.REGULAR_USER,
             createdAt: expect.any(String)
         });
 
-        expect(body.user).not.toHaveProperty('password');
+        expect(bodyMe.user).not.toHaveProperty('password');
 
         const resLogout = await api.post('/api/auth/logout');
         expect(resLogout.status()).toBe(200);
         expect(resLogout.headers()['content-type']).toContain('application/json');
         const bodyLogout = await resLogout.json();
         expect(bodyLogout).toEqual({ ok: true });
+
+        // After logout the session is gone
+        const meAfterLogout = await api.get('/api/auth/me');
+        expect(meAfterLogout.status()).toBe(200);
+        expect(await meAfterLogout.json()).toEqual({ user: null });
     });
 
-    test('POST /api/auth/me without being logged in', {
+    test('GET /api/auth/me without being logged in', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ api }) => {
         const me = await api.get('/api/auth/me')
