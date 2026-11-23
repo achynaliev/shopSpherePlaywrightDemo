@@ -1,13 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { submitAndWaitForAuth } from '../../page-objects/Authentication.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-
-// Resolve ECOMMERCE root directory regardless of where Playwright is launched.
-const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../');
-
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 
 // Validate required environment variables.
 for (const key of ['REGULAR_USER2', 'PASSWORD', 'WRONG_PASSWORD']) {
@@ -15,12 +7,6 @@ for (const key of ['REGULAR_USER2', 'PASSWORD', 'WRONG_PASSWORD']) {
         throw new Error(`Missing environment variable: ${key}`);
     }
 }
-
-// Same database the Playwright web server uses (see playwright.config.js).
-// DATABASE_PATH in .env is for deployment, so it's ignored here.
-const DB_PATH = process.env.E2E_DATABASE_PATH
-    ? path.resolve(process.env.E2E_DATABASE_PATH)
-    : path.join(ROOT_DIR, 'server/data/shop.db');
 
 test.describe('Session tests for logged in user and not logged in user', () => {
     test('logged in user should be redirected from login/sign up pages', { tag: ['@p1', '@regression'] },

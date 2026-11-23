@@ -4,13 +4,9 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { submitAndWaitForAuth } from '../../page-objects/Authentication.js';
 import { test, expect } from '@playwright/test';
-import dotenv from 'dotenv';
 
-// Resolve ECOMMERCE root directory regardless of where Playwright is launched.
+// ECOMMERCE root, used to find the app's database file.
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../');
-
-// Load .env from ECOMMERCE root.
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 
 // Validate required environment variables.
 for (const key of ['REGISTRATION_EMAIL', 'PASSWORD', 'WRONG_PASSWORD']) {

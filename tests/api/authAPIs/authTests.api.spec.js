@@ -1,5 +1,4 @@
 import { test, expect } from '../../fixtures/api.fixture';
-import dotenv from 'dotenv';
 
 test.describe('Sign up API tests', () => {
     test('POST /api/auth/register - Register a new user', {

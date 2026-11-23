@@ -1,12 +1,6 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { request } from '@playwright/test';
-import dotenv from 'dotenv';
 
-const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
-// Load .env from ECOMMERCE root (in CI the variables come from GitHub secrets instead).
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
+// Env vars (.env locally, GitHub secrets in CI) are loaded by playwright.config.js.
 
 // Accounts the specs sign in with. The names matter: specs assert on "Hello, <first name>".
 const USERS = [

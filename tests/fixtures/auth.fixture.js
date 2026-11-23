@@ -1,14 +1,4 @@
 import { test as base, expect } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const ROOT_DIR = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '../../'
-);
-
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 
 // Accounts whose cart/orders the specs change. Each worker gets its own copy (see workerUsers).
 const STATEFUL_USERS = ['REGULAR_USER3', 'REGULAR_USER4', 'REGULAR_USER6'];

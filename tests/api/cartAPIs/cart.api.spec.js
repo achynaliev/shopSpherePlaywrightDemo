@@ -18,16 +18,15 @@ test.describe('Cart API', () => {
         expect(body).toEqual(emptyCart);
     });
 
-    test('GET /api/cart - get empty cart not authorized', {
+    test('GET /api/cart - as a guest returns 401', {
         tag: ['@api', '@p0', '@regression']
     }, async ({ api }) => {
         const res = await api.get('/api/cart');
 
-        expect(res.status()).toBe(200);
+        // Guest carts live in localStorage; the cart API is for signed-in users only
+        expect(res.status()).toBe(401);
         expect(res.headers()['content-type']).toContain('application/json');
-
-        const body = await res.json();
-        expect(body).toEqual(emptyCart);
+        expect(await res.json()).toEqual({ error: 'Please sign in to continue.' });
     });
 
     test('POST /api/cart - add item to cart', {

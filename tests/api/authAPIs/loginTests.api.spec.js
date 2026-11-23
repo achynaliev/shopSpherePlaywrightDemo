@@ -1,5 +1,4 @@
 import { test, expect } from '../../fixtures/api.fixture';
-import dotenv from 'dotenv';
 
 test.describe('Login and Logout API tests', () => {
     test('POST /api/auth/login happy path login and logout', {

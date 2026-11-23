@@ -1,8 +1,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// Load test accounts/passwords from ECOMMERCE/.env once for the whole run (main process and workers).
+// Variables already set (e.g. GitHub secrets in CI) win over the file.
+dotenv.config({ path: path.join(ROOT, '.env'), quiet: true });
 const PORT = Number(process.env.E2E_PORT) || 4173;
 const BASE_URL = process.env.E2E_BASE_URL || `http://localhost:${PORT}`;
 // API specs hit the same app by default; set API_BASE_URL to aim them at another host (e.g. staging).

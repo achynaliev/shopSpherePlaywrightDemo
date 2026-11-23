@@ -1,10 +1,4 @@
 import { test as base, expect } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../');
-dotenv.config({ path: path.join(ROOT_DIR, '.env') });
 
 // Base URL for API specs. The 'api' project in playwright.config.js sets it from
 // API_BASE_URL, falling back to the local app (E2E_BASE_URL or http://localhost:4173).
